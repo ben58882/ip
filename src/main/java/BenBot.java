@@ -1,6 +1,13 @@
+import java.util.Scanner;
+
 /** The entry point for the BenBot chatbot application. */
 public class BenBot {
-    /** Starts BenBot and displays its welcome message. */
+    private static final String DIVIDER = "____________________________________________________________";
+
+    /**
+     * Starts BenBot, echoes each command entered by the user, and exits when the
+     * user enters {@code bye}.
+     */
     public static void main(String[] args) {
         String banner = " ____              ____        _   \n"
                 + "| __ )  ___ _ __  | __ )  ___ | |_ \n"
@@ -11,7 +18,20 @@ public class BenBot {
         System.out.println(banner);
         System.out.println("Hello! I'm BenBot.");
         System.out.println("What can I do for you?");
-        System.out.println("____________________________________________________________");
-        System.out.println("Bye. Hope to see you again soon!");
+        System.out.println(DIVIDER);
+
+        Scanner scanner = new Scanner(System.in);
+        while (scanner.hasNextLine()) {
+            String command = scanner.nextLine();
+            System.out.println(DIVIDER);
+
+            if (command.equals("bye")) {
+                System.out.println("Bye. Hope to see you again soon!");
+                break;
+            }
+
+            System.out.println(" " + command);
+            System.out.println(DIVIDER);
+        }
     }
 }
