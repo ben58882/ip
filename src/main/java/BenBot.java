@@ -2,11 +2,15 @@ import java.util.Scanner;
 
 /** The entry point for the BenBot chatbot application. */
 public class BenBot {
+    /** The maximum number of tasks that BenBot can keep during one run. */
+    private static final int MAX_TASKS = 100;
+
+    /** A line used to separate BenBot's messages in the terminal. */
     private static final String DIVIDER = "____________________________________________________________";
 
     /**
-     * Starts BenBot, echoes each command entered by the user, and exits when the
-     * user enters {@code bye}.
+     * Starts BenBot, stores entered tasks in memory, and exits when the user enters
+     * {@code bye}.
      */
     public static void main(String[] args) {
         String banner = " ____              ____        _   \n"
@@ -20,6 +24,8 @@ public class BenBot {
         System.out.println("What can I do for you?");
         System.out.println(DIVIDER);
 
+        String[] tasks = new String[MAX_TASKS];
+        int taskCount = 0;
         Scanner scanner = new Scanner(System.in);
         while (scanner.hasNextLine()) {
             String command = scanner.nextLine();
@@ -27,10 +33,20 @@ public class BenBot {
 
             if (command.equals("bye")) {
                 System.out.println("Bye. Hope to see you again soon!");
+                System.out.println(DIVIDER);
                 break;
             }
 
-            System.out.println(" " + command);
+            if (command.equals("list")) {
+                for (int i = 0; i < taskCount; i++) {
+                    System.out.println((i + 1) + ". " + tasks[i]);
+                }
+            } else {
+                tasks[taskCount] = command;
+                taskCount++;
+                System.out.println(" added: " + command);
+            }
+
             System.out.println(DIVIDER);
         }
     }
