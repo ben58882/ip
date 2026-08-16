@@ -28,7 +28,9 @@ public class BenBot {
         int taskCount = 0;
         Scanner scanner = new Scanner(System.in);
         while (scanner.hasNextLine()) {
-            String command = scanner.nextLine();
+            String line = scanner.nextLine();
+            String[] words = line.split(" ");
+            String command = words[0];
             System.out.println(DIVIDER);
 
             if (command.equals("bye")) {
@@ -36,33 +38,47 @@ public class BenBot {
                 System.out.println(DIVIDER);
                 break;
             }
-
             else if (command.equals("list")) {
                 System.out.println("Here are the tasks in your list:");
                 for (int i = 0; i < taskCount; i++) {
                     System.out.println((i + 1) + "." + tasks[i]);
                 }
             }
-            else if (command.startsWith("mark ")) {
-                int taskNumber = Integer.parseInt(command.substring(5));
+            else if(command.equals("todo")){
+                tasks[taskCount] = new ToDo(words);
+                taskCount++;
+                System.out.println("Got it. I've added this task:");
+                System.out.println("  " + tasks[taskCount - 1]);
+                System.out.println("Now you have " + taskCount + " tasks in the list.");
+            }
+            else if (command.equals("deadline")) {
+                tasks[taskCount] = new Deadline(words);
+                taskCount++;
+                System.out.println("Got it. I've added this task:");
+                System.out.println("  " + tasks[taskCount - 1]);
+                System.out.println("Now you have " + taskCount + " tasks in the list.");
+            }
+            else if (command.equals("event")) {
+                tasks[taskCount] = new Event(words);
+                taskCount++;
+                System.out.println("Got it. I've added this task:");
+                System.out.println("  " + tasks[taskCount - 1]);
+                System.out.println("Now you have " + taskCount + " tasks in the list.");
+            }
+            else if (command.equals("mark")) {
+                int taskNumber = Integer.parseInt(words[1]);
                 Task task = tasks[taskNumber - 1];
                 task.markDone();
                 System.out.println("Nice! I've marked this task as done:");
                 System.out.println("  " + task);
             }
-            else if (command.startsWith("unmark ")) {
-                int taskNumber = Integer.parseInt(command.substring(7));
+            else if (command.equals("unmark")) {
+                int taskNumber = Integer.parseInt(words[1]);
                 Task task = tasks[taskNumber - 1];
                 task.markUndone();
                 System.out.println("OK, I've marked this task as not done yet:");
                 System.out.println("  " + task);
             }
-            else {
-                tasks[taskCount] = new Task(command);
-                taskCount++;
-                System.out.println(" added: " + command);
-            }
-
             System.out.println(DIVIDER);
         }
     }
