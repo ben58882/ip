@@ -67,6 +67,11 @@ public class BenBot {
                     tasks[taskCount] = new Event(words);
                     taskCount++;
                     printTaskAdded(tasks[taskCount - 1], taskCount);
+                } else if (command.equals("delete")) {
+                    int taskIndex = getTaskIndex(words, taskCount, "delete");
+                    Task removedTask = tasks[taskIndex];
+                    taskCount = removeTask(tasks, taskIndex, taskCount);
+                    printTaskRemoved(removedTask, taskCount);
                 } else if (command.equals("mark")) {
                     Task task = tasks[getTaskIndex(words, taskCount, "mark")];
                     task.markDone();
@@ -96,6 +101,27 @@ public class BenBot {
         System.out.println("  " + task);
         String taskWord = taskCount == 1 ? "task" : "tasks";
         System.out.println("Now you have " + taskCount + " " + taskWord + " in the list.");
+    }
+
+    /** Prints the confirmation shown after deleting a task. */
+    private static void printTaskRemoved(Task task, int taskCount) {
+        System.out.println("Noted. I've removed this task:");
+        System.out.println("  " + task);
+        String taskWord = taskCount == 1 ? "task" : "tasks";
+        System.out.println("Now you have " + taskCount + " " + taskWord + " in the list.");
+    }
+
+    /**
+     * Removes a task by shifting all later tasks one position to the left.
+     *
+     * @return the new number of stored tasks
+     */
+    private static int removeTask(Task[] tasks, int taskIndex, int taskCount) {
+        for (int i = taskIndex; i < taskCount - 1; i++) {
+            tasks[i] = tasks[i + 1];
+        }
+        tasks[taskCount - 1] = null;
+        return taskCount - 1;
     }
 
     /** Ensures that a command without extra words has the expected format. */
