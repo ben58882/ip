@@ -13,9 +13,9 @@ public class Event extends Task {
      * {@code event DESCRIPTION /from START /to END}. Times are kept as text.
      *
      * @param words the words entered in the command
-     */
+    */
     public Event(String[] words) {
-        super(getDescription(words));
+        super(getDescription(words), TaskType.EVENT);
         this.from = getFrom(words);
         this.to = getTo(words);
     }
@@ -52,6 +52,6 @@ public class Event extends Task {
     /** Returns the event in the chatbot's display format. */
     @Override
     public String toString() {
-        return "[E]" + super.toString() + " (from: " + from + " to: " + to + ")";
+        return super.toString() + " (from: " + from + " to: " + to + ")";
     }
 }

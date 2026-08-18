@@ -10,9 +10,9 @@ public class Deadline extends Task {
      * The date is kept as text rather than converted to a date object.
      *
      * @param words the words entered in the command
-     */
+    */
     public Deadline(String[] words) {
-        super(getDescription(words));
+        super(getDescription(words), TaskType.DEADLINE);
         this.by = getBy(words);
     }
 
@@ -41,6 +41,6 @@ public class Deadline extends Task {
     /** Returns the deadline in the chatbot's display format. */
     @Override
     public String toString() {
-        return "[D]" + super.toString() + " (by: " + by + ")";
+        return super.toString() + " (by: " + by + ")";
     }
 }

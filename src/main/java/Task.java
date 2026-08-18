@@ -1,26 +1,39 @@
+/** A task stored by BenBot. */
 public class Task {
-    protected String description;
-    protected boolean isDone;
+    private final String description;
+    private final TaskType type;
+    private TaskStatus status;
 
-    public Task(String description){
+    /** Creates a basic to-do task. */
+    public Task(String description) {
+        this(description, TaskType.TODO);
+    }
+
+    /** Creates a task with the specified type. */
+    protected Task(String description, TaskType type) {
         this.description = description;
-        this.isDone = false;
+        this.type = type;
+        this.status = TaskStatus.NOT_DONE;
     }
 
+    /** Returns the icon for the current completion status. */
     protected String getStatusIcon() {
-        return (isDone ? "[X]" : "[ ]"); // mark done task with X
+        return status.getIcon();
     }
 
-    public void markDone(){
-        this.isDone = true;
+    /** Marks this task as completed. */
+    public void markDone() {
+        status = TaskStatus.DONE;
     }
 
-    public void markUndone(){
-        this.isDone = false;
+    /** Marks this task as not completed. */
+    public void markUndone() {
+        status = TaskStatus.NOT_DONE;
     }
 
+    /** Returns the task in the format shown by BenBot. */
     @Override
-    public String toString(){
-        return this.getStatusIcon() + " " + this.description;
+    public String toString() {
+        return type.getSymbol() + getStatusIcon() + " " + description;
     }
 }
