@@ -1,3 +1,5 @@
+package benbot;
+
 /** The kinds of tasks that BenBot can store. */
 public enum TaskType {
     /** A task without a date or time. */

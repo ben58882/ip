@@ -1,3 +1,5 @@
+package benbot;
+
 /** The possible completion states of a task. */
 public enum TaskStatus {
     /** A task that has not been completed. */
