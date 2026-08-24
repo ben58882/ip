@@ -1,3 +1,5 @@
+package benbot;
+
 import java.util.Arrays;
 
 /** A task without an attached date or time. */

@@ -1,3 +1,5 @@
+package benbot;
+
 import java.util.Arrays;
 
 /** A task that must be completed by a specified date or time. */
@@ -9,8 +11,8 @@ public class Deadline extends Task {
      * Creates a deadline from words in the form {@code deadline DESCRIPTION /by DATE}.
      * The date is kept as text rather than converted to a date object.
      *
-     * @param words the words entered in the command
-    */
+     * @param words the words entered in the command.
+     */
     public Deadline(String[] words) {
         super(getDescription(words), TaskType.DEADLINE);
         this.by = getBy(words);
@@ -42,5 +44,11 @@ public class Deadline extends Task {
     @Override
     public String toString() {
         return super.toString() + " (by: " + by + ")";
+    }
+
+    /** Returns the command used to recreate this deadline from stored data. */
+    @Override
+    public String toStorageString() {
+        return "deadline " + getDescription() + " /by " + by;
     }
 }

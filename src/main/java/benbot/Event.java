@@ -1,3 +1,5 @@
+package benbot;
+
 import java.util.Arrays;
 
 /** A task that has a starting time and an ending time. */
@@ -12,8 +14,8 @@ public class Event extends Task {
      * Creates an event from words in the form
      * {@code event DESCRIPTION /from START /to END}. Times are kept as text.
      *
-     * @param words the words entered in the command
-    */
+     * @param words the words entered in the command.
+     */
     public Event(String[] words) {
         super(getDescription(words), TaskType.EVENT);
         this.from = getFrom(words);
@@ -53,5 +55,11 @@ public class Event extends Task {
     @Override
     public String toString() {
         return super.toString() + " (from: " + from + " to: " + to + ")";
+    }
+
+    /** Returns the command used to recreate this event from stored data. */
+    @Override
+    public String toStorageString() {
+        return "event " + getDescription() + " /from " + from + " /to " + to;
     }
 }
