@@ -1,25 +1,39 @@
 package benbot;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 
 /** A task that has a starting time and an ending time. */
 public class Event extends Task {
-    /** The start time text supplied by the user. */
-    private final String from;
+    /** The event's start date and optional time. */
+    private final LocalDateTime from;
 
-    /** The end time text supplied by the user. */
-    private final String to;
+    /** Whether the start date included a time. */
+    private final boolean fromIncludesTime;
+
+    /** The event's end date and optional time. */
+    private final LocalDateTime to;
+
+    /** Whether the end date included a time. */
+    private final boolean toIncludesTime;
 
     /**
      * Creates an event from words in the form
-     * {@code event DESCRIPTION /from START /to END}. Times are kept as text.
+     * {@code event DESCRIPTION /from START /to END}. Dates are stored as date-time values.
      *
      * @param words the words entered in the command.
      */
-    public Event(String[] words) {
+    public Event(String[] words) throws InvalidCommandException {
         super(getDescription(words), TaskType.EVENT);
-        this.from = getFrom(words);
-        this.to = getTo(words);
+        DateTimeParser.ParsedDateTime parsedFrom = DateTimeParser.parse(getFrom(words));
+        DateTimeParser.ParsedDateTime parsedTo = DateTimeParser.parse(getTo(words));
+        this.from = parsedFrom.value();
+        this.fromIncludesTime = parsedFrom.includesTime();
+        this.to = parsedTo.value();
+        this.toIncludesTime = parsedTo.includesTime();
+        if (to.isBefore(from)) {
+            throw new InvalidCommandException("An event's end must not be before its start.");
+        }
     }
 
     /** Returns the event description before the {@code /from} marker. */
@@ -28,14 +42,14 @@ public class Event extends Task {
         return String.join(" ", Arrays.copyOfRange(words, 1, fromIndex));
     }
 
-    /** Returns the start-time text between the {@code /from} and {@code /to} markers. */
+    /** Returns the start-date text between the {@code /from} and {@code /to} markers. */
     private static String getFrom(String[] words) {
         int fromIndex = findMarker(words, "/from");
         int toIndex = findMarker(words, "/to");
         return String.join(" ", Arrays.copyOfRange(words, fromIndex + 1, toIndex));
     }
 
-    /** Returns the end-time text after the {@code /to} marker. */
+    /** Returns the end-date text after the {@code /to} marker. */
     private static String getTo(String[] words) {
         int toIndex = findMarker(words, "/to");
         return String.join(" ", Arrays.copyOfRange(words, toIndex + 1, words.length));
@@ -54,12 +68,15 @@ public class Event extends Task {
     /** Returns the event in the chatbot's display format. */
     @Override
     public String toString() {
-        return super.toString() + " (from: " + from + " to: " + to + ")";
+        return super.toString() + " (from: " + DateTimeParser.format(from, fromIncludesTime)
+                + " to: " + DateTimeParser.format(to, toIncludesTime) + ")";
     }
 
     /** Returns the command used to recreate this event from stored data. */
     @Override
     public String toStorageString() {
-        return "event " + getDescription() + " /from " + from + " /to " + to;
+        return "event " + getDescription() + " /from "
+                + DateTimeParser.formatForStorage(from, fromIncludesTime) + " /to "
+                + DateTimeParser.formatForStorage(to, toIncludesTime);
     }
 }
