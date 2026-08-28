@@ -7,10 +7,23 @@ import java.nio.file.Path;
 /** Loads previously stored task commands from the application's data file. */
 public class StoredTaskLoader {
     /** The location of the stored task commands, relative to the working directory. */
-    private static final Path STORED_TASK_PATH = Path.of("data/stored-task");
+    private static final Path DEFAULT_STORED_TASK_PATH = Path.of("data/stored-task");
+
+    /** The location from which this loader reads task commands. */
+    private final Path storedTaskPath;
 
     /** Creates a loader for task commands stored in the application's data file. */
     public StoredTaskLoader() {
+        this(DEFAULT_STORED_TASK_PATH);
+    }
+
+    /**
+     * Creates a loader for task commands stored at the supplied path.
+     *
+     * @param storedTaskPath the file that contains the stored task commands.
+     */
+    StoredTaskLoader(Path storedTaskPath) {
+        this.storedTaskPath = storedTaskPath;
     }
 
     /**
@@ -22,7 +35,7 @@ public class StoredTaskLoader {
      * @param taskCountPointer holds the current number of stored tasks.
      */
     public void load(TaskLoader taskLoader, Task[] tasks, int[] taskCountPointer) {
-        if (!Files.exists(STORED_TASK_PATH)) {
+        if (!Files.exists(storedTaskPath)) {
             System.out.println("No stored data found starting from scratch...");
             System.out.println(BenBot.DIVIDER);
             return;
@@ -30,7 +43,7 @@ public class StoredTaskLoader {
 
         try {
             int taskCountBeforeLoading = taskCountPointer[0];
-            String storedData = Files.readString(STORED_TASK_PATH);
+            String storedData = Files.readString(storedTaskPath);
             String[] commands = storedData.split("\\R");
             for (int i = 0; i < commands.length; i++) {
                 String command = commands[i];

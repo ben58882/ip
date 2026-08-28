@@ -26,11 +26,26 @@ public class BenBot {
 
     /** Creates a BenBot application with an empty task list. */
     public BenBot() {
-        tasks = new Task[MAX_TASKS];
-        taskCount = new int[] {0};
-        taskLoader = new TaskLoader(MAX_TASKS);
-        storedTaskLoader = new StoredTaskLoader();
-        ui = new Ui();
+        this(new Task[MAX_TASKS], new int[] {0}, new TaskLoader(MAX_TASKS),
+                new StoredTaskLoader(), new Ui());
+    }
+
+    /**
+     * Creates a BenBot application from its collaborating components.
+     *
+     * @param tasks the task array managed by the application.
+     * @param taskCount holds the number of tasks in {@code tasks}.
+     * @param taskLoader processes task commands.
+     * @param storedTaskLoader loads previously stored task commands.
+     * @param ui handles user interaction.
+     */
+    BenBot(Task[] tasks, int[] taskCount, TaskLoader taskLoader,
+           StoredTaskLoader storedTaskLoader, Ui ui) {
+        this.tasks = tasks;
+        this.taskCount = taskCount;
+        this.taskLoader = taskLoader;
+        this.storedTaskLoader = storedTaskLoader;
+        this.ui = ui;
     }
 
     /** Loads tasks stored by a previous run of the application. */

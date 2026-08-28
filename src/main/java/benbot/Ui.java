@@ -9,9 +9,23 @@ class Ui {
     /** Reads commands entered through the standard input stream. */
     private final Scanner scanner;
 
+    /** Stores tasks when the user exits the application. */
+    private final TaskDataStore taskDataStore;
+
     /** Creates a user interface that reads commands from standard input. */
     public Ui() {
-        scanner = new Scanner(System.in);
+        this(new Scanner(System.in), new TaskDataStore());
+    }
+
+    /**
+     * Creates a user interface with the supplied input source and data store.
+     *
+     * @param scanner reads commands entered by the user.
+     * @param taskDataStore stores tasks when the user exits.
+     */
+    Ui(Scanner scanner, TaskDataStore taskDataStore) {
+        this.scanner = scanner;
+        this.taskDataStore = taskDataStore;
     }
 
     /** Displays BenBot's welcome banner and initial prompt. */
@@ -41,7 +55,7 @@ class Ui {
             System.out.println(BenBot.DIVIDER);
             if (taskLoader.addTask(line, tasks, taskCount, true)) {
                 try {
-                    new TaskDataStore().store(tasks, taskCount[0]);
+                    taskDataStore.store(tasks, taskCount[0]);
                 } catch (IOException e) {
                     System.out.println("ERROR: Unable to store tasks: " + e.getMessage());
                 }
