@@ -6,9 +6,13 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
 /** Stores BenBot's tasks so that they can be reloaded in a later run. */
-public class StoreData {
+public class TaskDataStore {
     /** The location of the file containing task commands. */
     private static final Path STORED_TASK_PATH = Path.of("data/stored-task");
+
+    /** Creates a data store that writes reloadable task commands. */
+    public TaskDataStore() {
+    }
 
     /**
      * Writes every stored task as one reloadable command line.
@@ -16,7 +20,7 @@ public class StoreData {
      *
      * @param tasks the task array to store.
      * @param taskCount the number of tasks currently stored in the array.
-     * @throws IOException If the data file or its parent directory cannot be written.
+     * @throws IOException if the data file or its parent directory cannot be written.
      */
     public void store(Task[] tasks, int taskCount) throws IOException {
         Path parentDirectory = STORED_TASK_PATH.getParent();

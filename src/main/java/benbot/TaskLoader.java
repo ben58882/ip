@@ -2,9 +2,14 @@ package benbot;
 
 /** Processes BenBot commands and updates the in-memory task list. */
 public class TaskLoader {
+    /** The maximum number of tasks the task array can contain. */
     private final int maxTasks;
 
-    /** Creates a command processor with the specified maximum task capacity. */
+    /**
+     * Creates a command processor with the specified maximum task capacity.
+     *
+     * @param maxTasks the maximum number of tasks that may be stored.
+     */
     public TaskLoader(int maxTasks) {
         this.maxTasks = maxTasks;
     }
@@ -16,10 +21,9 @@ public class TaskLoader {
      * @param tasks the task array to update.
      * @param taskCountPointer the current task count, stored in a one-element array.
      * @param shouldPrint whether to display command responses and error messages.
-     * @return Whether the command requests that BenBot exits.
+     * @return whether the command requests that BenBot exits.
      */
     public boolean addTask(String line, Task[] tasks, int[] taskCountPointer, boolean shouldPrint) {
-
         int taskCount = taskCountPointer[0];
         boolean shouldExit = false;
 

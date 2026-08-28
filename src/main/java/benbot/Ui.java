@@ -3,20 +3,19 @@ package benbot;
 import java.io.IOException;
 import java.util.Scanner;
 
-/** Handles BenBot's console input and output. */
-class Ui{
+/** Handles BenBot's command-line interaction with the user. */
+class Ui {
 
-    public static final String DIVIDER = "____________________________________________________________";
+    /** Reads commands entered through the standard input stream. */
+    private final Scanner scanner;
 
-    private Scanner scanner;
-
-    /** Creates the user interface using standard input. */
-    public Ui(){
-        this.scanner = new Scanner(System.in);
+    /** Creates a user interface that reads commands from standard input. */
+    public Ui() {
+        scanner = new Scanner(System.in);
     }
 
-    /** Displays BenBot's welcome banner and greeting. */
-    public void welcome(){
+    /** Displays BenBot's welcome banner and initial prompt. */
+    public void welcome() {
         String banner = " ____              ____        _   \n"
                 + "| __ )  ___ _ __  | __ )  ___ | |_ \n"
                 + "|  _ \\ / _ \\ '_ \\ |  _ \\ / _ \\| __|\n"
@@ -26,23 +25,23 @@ class Ui{
         System.out.println(banner);
         System.out.println("Hello! I'm BenBot.");
         System.out.println("What can I do for you?");
-        System.out.println(DIVIDER);
+        System.out.println(BenBot.DIVIDER);
     }
 
     /**
-     * Reads and processes commands until the user exits the application.
+     * Reads and processes commands until input ends or the user enters {@code bye}.
      *
-     * @param taskLoader processes commands entered by the user
-     * @param tasks the task array to update
-     * @param taskCount the current number of tasks, stored in a one-element array
+     * @param taskLoader processes the entered commands.
+     * @param tasks stores the current tasks.
+     * @param taskCount holds the current number of tasks.
      */
-    public void run(TaskLoader taskLoader, Task[] tasks, int[] taskCount){
-        while (this.scanner.hasNextLine()) {
+    public void run(TaskLoader taskLoader, Task[] tasks, int[] taskCount) {
+        while (scanner.hasNextLine()) {
             String line = scanner.nextLine().trim();
-            System.out.println(DIVIDER);
+            System.out.println(BenBot.DIVIDER);
             if (taskLoader.addTask(line, tasks, taskCount, true)) {
                 try {
-                    new StoreData().store(tasks, taskCount[0]);
+                    new TaskDataStore().store(tasks, taskCount[0]);
                 } catch (IOException e) {
                     System.out.println("ERROR: Unable to store tasks: " + e.getMessage());
                 }

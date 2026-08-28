@@ -5,9 +5,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /** Loads previously stored task commands from the application's data file. */
-public class LoadStoredData {
+public class StoredTaskLoader {
     /** The location of the stored task commands, relative to the working directory. */
     private static final Path STORED_TASK_PATH = Path.of("data/stored-task");
+
+    /** Creates a loader for task commands stored in the application's data file. */
+    public StoredTaskLoader() {
+    }
 
     /**
      * Loads each command in the stored-task file into the supplied task list.
