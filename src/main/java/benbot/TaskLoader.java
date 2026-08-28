@@ -1,5 +1,7 @@
 package benbot;
 
+import java.util.Locale;
+
 /** Processes BenBot commands and updates the in-memory task list. */
 public class TaskLoader {
     /** The maximum number of tasks the task array can contain. */
@@ -75,6 +77,10 @@ public class TaskLoader {
                 Task task = tasks[getTaskIndex(words, taskCount, "unmark")];
                 task.markUndone();
                 printMessage(shouldPrint, "OK, I've marked this task as not done yet:", "  " + task);
+            } else if (command.equals("find")) {
+                requireDescription(words, "find KEYWORD");
+                String keyword = line.substring(command.length()).trim();
+                printMatchingTasks(keyword, tasks, taskCount, shouldPrint);
             } else {
                 throw new InvalidCommandException("I don't know what that means.");
             }
@@ -101,6 +107,19 @@ public class TaskLoader {
                 "Noted. I've removed this task:",
                 "  " + task,
                 "Now you have " + taskCount + " " + taskWord + " in the list.");
+    }
+
+    /** Prints every task whose description contains the given keyword, ignoring case. */
+    private void printMatchingTasks(String keyword, Task[] tasks, int taskCount, boolean shouldPrint) {
+        String normalizedKeyword = keyword.toLowerCase(Locale.ROOT);
+        printMessage(shouldPrint, "Here are the matching tasks in your list:");
+
+        for (int i = 0; i < taskCount; i++) {
+            String description = tasks[i].getDescription().toLowerCase(Locale.ROOT);
+            if (description.contains(normalizedKeyword)) {
+                printMessage(shouldPrint, (i + 1) + "." + tasks[i]);
+            }
+        }
     }
 
     /** Prints responses only when output is enabled. */
