@@ -17,7 +17,11 @@ public enum TaskType {
         this.symbol = symbol;
     }
 
-    /** Returns the type symbol used in the task list. */
+    /**
+     * Returns the type symbol used in the task list.
+     *
+     * @return the symbol that represents this task type.
+     */
     public String getSymbol() {
         return symbol;
     }

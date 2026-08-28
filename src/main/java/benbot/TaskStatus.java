@@ -14,7 +14,11 @@ public enum TaskStatus {
         this.icon = icon;
     }
 
-    /** Returns the status icon used in the task list. */
+    /**
+     * Returns the status icon used in the task list.
+     *
+     * @return the icon that represents this status.
+     */
     public String getIcon() {
         return icon;
     }

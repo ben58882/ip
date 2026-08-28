@@ -46,18 +46,35 @@ public final class DateTimeParser {
         }
     }
 
-    /** Formats a parsed date in BenBot's user-facing format. */
+    /**
+     * Returns a parsed date in BenBot's user-facing format.
+     *
+     * @param value the date and time to format.
+     * @param includesTime whether the value includes a user-supplied time.
+     * @return the formatted date, with a time when {@code includesTime} is {@code true}.
+     */
     public static String format(LocalDateTime value, boolean includesTime) {
         return includesTime ? value.format(DISPLAY_DATE_TIME) : value.format(DISPLAY_DATE);
     }
 
-    /** Formats a parsed date in a stable format that can be loaded again later. */
+    /**
+     * Returns a parsed date in a stable format that can be loaded again later.
+     *
+     * @param value the date and time to format.
+     * @param includesTime whether the value includes a user-supplied time.
+     * @return the formatted date in the format accepted by {@link #parse(String)}.
+     */
     public static String formatForStorage(LocalDateTime value, boolean includesTime) {
         return includesTime ? value.format(DateTimeFormatter.ofPattern("d/M/uuuu HHmm"))
                 : value.toLocalDate().format(DATE);
     }
 
-    /** A parsed scheduling value together with whether the command included a time. */
+    /**
+     * A parsed scheduling value together with whether the command included a time.
+     *
+     * @param value the parsed date and time.
+     * @param includesTime whether the command included a time.
+     */
     public record ParsedDateTime(LocalDateTime value, boolean includesTime) {
     }
 }
