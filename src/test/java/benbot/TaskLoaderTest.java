@@ -53,8 +53,8 @@ class TaskLoaderTest {
         Task[] tasks = {new Task("Read Book"), new Task("buy pen"), null};
         int[] taskCount = {2};
 
-        String output = OutputCapture.capture(
-                () -> loader.addTask("find BOOK", tasks, taskCount, true));
+        String output = OutputCapture.capture(() ->
+                loader.addTask("find BOOK", tasks, taskCount, true));
 
         assertEquals(2, taskCount[0]);
         assertTrue(output.contains("Here are the matching tasks in your list:"));
@@ -68,10 +68,10 @@ class TaskLoaderTest {
         Task[] tasks = {new Task("read book"), null};
         int[] taskCount = {1};
 
-        String listOutput = OutputCapture.capture(
-                () -> loader.addTask("list", tasks, taskCount, true));
-        String errorOutput = OutputCapture.capture(
-                () -> loader.addTask("unknown", tasks, taskCount, true));
+        String listOutput = OutputCapture.capture(() ->
+                loader.addTask("list", tasks, taskCount, true));
+        String errorOutput = OutputCapture.capture(() ->
+                loader.addTask("unknown", tasks, taskCount, true));
 
         assertTrue(listOutput.contains("Here are the tasks in your list:"));
         assertTrue(listOutput.contains("1.[T][ ] read book"));
@@ -85,10 +85,10 @@ class TaskLoaderTest {
         Task[] tasks = {new Task("read book")};
         int[] taskCount = {1};
 
-        String invalidNumberOutput = OutputCapture.capture(
-                () -> loader.addTask("mark 2", tasks, taskCount, true));
-        String fullListOutput = OutputCapture.capture(
-                () -> loader.addTask("todo another task", tasks, taskCount, true));
+        String invalidNumberOutput = OutputCapture.capture(() ->
+                loader.addTask("mark 2", tasks, taskCount, true));
+        String fullListOutput = OutputCapture.capture(() ->
+                loader.addTask("todo another task", tasks, taskCount, true));
 
         assertTrue(invalidNumberOutput.contains("That task number does not exist."));
         assertTrue(fullListOutput.contains("Sorry, the task list is full."));
