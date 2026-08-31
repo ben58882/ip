@@ -21,10 +21,10 @@ public class Event extends Task {
      * Creates an event from words in the form
      * {@code event DESCRIPTION /from START /to END}. Dates are stored as date-time values.
      *
-     * @param words the words entered in the command.
+     * @param words the variable-length sequence of words entered in the command.
      * @throws InvalidCommandException if either date text is invalid or the end precedes the start.
      */
-    public Event(String[] words) throws InvalidCommandException {
+    public Event(String... words) throws InvalidCommandException {
         super(getDescription(words), TaskType.EVENT);
         DateTimeParser.ParsedDateTime parsedStart = DateTimeParser.parse(getStartDateText(words));
         DateTimeParser.ParsedDateTime parsedEnd = DateTimeParser.parse(getEndDateText(words));
