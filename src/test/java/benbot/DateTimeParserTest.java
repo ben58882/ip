@@ -29,8 +29,8 @@ class DateTimeParserTest {
 
     @Test
     void parse_invalidDate_throwsHelpfulException() {
-        InvalidCommandException exception = assertThrows(InvalidCommandException.class,
-                () -> DateTimeParser.parse("31/2/2029"));
+        InvalidCommandException exception = assertThrows(InvalidCommandException.class, () ->
+                DateTimeParser.parse("31/2/2029"));
 
         assertTrue(exception.getMessage().startsWith("Use a date such as"));
     }

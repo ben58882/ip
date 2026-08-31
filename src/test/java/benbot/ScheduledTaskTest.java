@@ -48,8 +48,8 @@ class ScheduledTaskTest {
 
     @Test
     void event_endBeforeStart_throwsException() {
-        InvalidCommandException exception = assertThrows(InvalidCommandException.class,
-                () -> new Event(new String[] {
+        InvalidCommandException exception = assertThrows(InvalidCommandException.class, () ->
+                new Event(new String[] {
                     "event", "study", "/from", "2/12/2019", "2000", "/to", "2/12/2019", "1800"
                 }));
 

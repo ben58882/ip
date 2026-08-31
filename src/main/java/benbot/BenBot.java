@@ -2,12 +2,12 @@ package benbot;
 
 /** The entry point for the BenBot chatbot application. */
 public class BenBot {
-    /** The maximum number of tasks that BenBot can store in memory. */
-    private static final int MAX_TASKS = 100;
-
     /** Separates sections of BenBot's command-line output. */
     public static final String DIVIDER =
             "____________________________________________________________";
+
+    /** The maximum number of tasks that BenBot can store in memory. */
+    private static final int MAX_TASKS = 100;
 
     /** The tasks currently managed by the application. */
     private final Task[] tasks;
