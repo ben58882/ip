@@ -54,13 +54,25 @@ class Ui {
             String line = scanner.nextLine().trim();
             System.out.println(BenBot.DIVIDER);
             if (taskLoader.addTask(line, tasks, taskCount, true)) {
-                try {
-                    taskDataStore.store(tasks, taskCount[0]);
-                } catch (IOException e) {
-                    System.out.println("ERROR: Unable to store tasks: " + e.getMessage());
+                String storageError = storeTasks(tasks, taskCount[0]);
+                if (!storageError.isEmpty()) {
+                    System.out.println(storageError);
                 }
                 break;
             }
+        }
+    }
+
+    /**
+     * Stores the current tasks and returns an error message if storage fails.
+     * Returning the message lets both text and graphical interfaces display it appropriately.
+     */
+    String storeTasks(Task[] tasks, int taskCount) {
+        try {
+            taskDataStore.store(tasks, taskCount);
+            return "";
+        } catch (IOException e) {
+            return "ERROR: Unable to store tasks: " + e.getMessage();
         }
     }
 }
