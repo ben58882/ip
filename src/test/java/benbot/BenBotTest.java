@@ -47,4 +47,22 @@ class BenBotTest {
         assertEquals(1, taskCount[0]);
         assertEquals("todo read book" + System.lineSeparator(), Files.readString(storedTaskPath));
     }
+
+    @Test
+    void getResponse_processesGuiCommandsAndStoresOnExit() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        Task[] tasks = new Task[2];
+        int[] taskCount = {0};
+        BenBot benBot = new BenBot(tasks, taskCount, new TaskLoader(2),
+                new StoredTaskLoader(temporaryDirectory.resolve("input")),
+                new Ui(new Scanner(""), new TaskDataStore(storedTaskPath)));
+
+        String addResponse = benBot.getResponse("todo read book");
+        String exitResponse = benBot.getResponse("bye");
+
+        assertTrue(addResponse.contains("I've added this task"));
+        assertTrue(exitResponse.contains("Hope to see you again soon"));
+        assertTrue(benBot.isExitRequested());
+        assertEquals("todo read book" + System.lineSeparator(), Files.readString(storedTaskPath));
+    }
 }

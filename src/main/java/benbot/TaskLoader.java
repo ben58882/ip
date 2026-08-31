@@ -1,11 +1,16 @@
 package benbot;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 /** Processes BenBot commands and updates the in-memory task list. */
 public class TaskLoader {
     /** The maximum number of tasks the task array can contain. */
     private final int maxTasks;
+
+    /** The response lines produced while processing the most recent command. */
+    private final List<String> responseLines = new ArrayList<>();
 
     /**
      * Creates a command processor with the specified maximum task capacity.
@@ -26,6 +31,7 @@ public class TaskLoader {
      * @return whether the command requests that BenBot exits.
      */
     public boolean addTask(String line, Task[] tasks, int[] taskCountPointer, boolean shouldPrint) {
+        responseLines.clear();
         int taskCount = taskCountPointer[0];
         boolean shouldExit = false;
 
@@ -91,6 +97,16 @@ public class TaskLoader {
         return shouldExit;
     }
 
+    /**
+     * Returns the response produced by the most recently processed command.
+     * This allows graphical interfaces to display replies without redirecting standard output.
+     *
+     * @return the complete response, with each response line separated by the platform line separator.
+     */
+    public String getLastResponse() {
+        return String.join(System.lineSeparator(), responseLines);
+    }
+
     /** Prints the confirmation shown after adding a task. */
     private void printTaskAdded(Task task, int taskCount, boolean shouldPrint) {
         String taskWord = taskCount == 1 ? "task" : "tasks";
@@ -124,6 +140,7 @@ public class TaskLoader {
 
     /** Prints responses only when output is enabled. */
     private void printMessage(boolean shouldPrint, String... messages) {
+        responseLines.addAll(List.of(messages));
         if (!shouldPrint) {
             return;
         }

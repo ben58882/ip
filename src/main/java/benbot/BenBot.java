@@ -24,6 +24,9 @@ public class BenBot {
     /** Handles BenBot's command-line input and output. */
     private final Ui ui;
 
+    /** Whether the most recently processed command asked the application to exit. */
+    private boolean exitRequested;
+
     /** Creates a BenBot application with an empty task list. */
     public BenBot() {
         this(new Task[MAX_TASKS], new int[] {0}, new TaskLoader(MAX_TASKS),
@@ -56,6 +59,38 @@ public class BenBot {
     /** Starts the command-line interaction loop. */
     public void run() {
         ui.run(taskLoader, tasks, taskCount);
+    }
+
+    /**
+     * Processes one command and returns BenBot's reply for a graphical interface to display.
+     *
+     * @param input the command entered by the user.
+     * @return BenBot's response to the command.
+     */
+    public String getResponse(String input) {
+        exitRequested = taskLoader.addTask(input.trim(), tasks, taskCount, false);
+        String response = taskLoader.getLastResponse();
+        if (exitRequested) {
+            String storageError = save();
+            if (!storageError.isEmpty()) {
+                response += System.lineSeparator() + storageError;
+            }
+        }
+        return response;
+    }
+
+    /** Returns whether the most recently processed command asked BenBot to exit. */
+    public boolean isExitRequested() {
+        return exitRequested;
+    }
+
+    /**
+     * Saves the current tasks when a graphical window closes.
+     *
+     * @return an empty string on success, or a user-facing error message on failure.
+     */
+    public String save() {
+        return ui.storeTasks(tasks, taskCount[0]);
     }
 
     /**
