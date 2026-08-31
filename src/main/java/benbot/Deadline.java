@@ -15,10 +15,10 @@ public class Deadline extends Task {
      * Creates a deadline from words in the form {@code deadline DESCRIPTION /by DATE}.
      * Dates are converted to {@link LocalDateTime} values so they can be validated and compared.
      *
-     * @param words the words entered in the command.
+     * @param words the variable-length sequence of words entered in the command.
      * @throws InvalidCommandException if the date text is invalid.
      */
-    public Deadline(String[] words) throws InvalidCommandException {
+    public Deadline(String... words) throws InvalidCommandException {
         super(getDescription(words), TaskType.DEADLINE);
         DateTimeParser.ParsedDateTime parsedDeadline =
                 DateTimeParser.parse(getDeadlineDateText(words));

@@ -44,7 +44,7 @@ class TaskTest {
 
     @Test
     void toDo_constructor_joinsDescriptionWords() {
-        ToDo task = new ToDo(new String[] {"todo", "read", "book"});
+        ToDo task = new ToDo("todo", "read", "book");
 
         assertEquals("[T][ ] read book", task.toString());
         assertEquals("todo read book", task.toStorageString());
