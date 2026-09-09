@@ -3,6 +3,7 @@ package benbot;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -102,5 +103,13 @@ class TaskLoaderTest {
 
         assertTrue(loader.addTask("bye", new Task[1], new int[] {0}, false));
         assertFalse(loader.addTask("bye later", new Task[1], new int[] {0}, false));
+    }
+
+    @Test
+    void addTask_taskCountExceedsCapacity_throwsAssertionError() {
+        TaskLoader loader = new TaskLoader(1);
+
+        assertThrows(AssertionError.class, () ->
+                loader.addTask("list", new Task[1], new int[] {2}, false));
     }
 }
