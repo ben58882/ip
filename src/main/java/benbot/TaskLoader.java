@@ -229,7 +229,7 @@ public class TaskLoader {
 
     /** Validates the required description and {@code /by} parts of a deadline. */
     private void validateDeadline(String[] words) throws InvalidCommandException {
-        int byIndex = findMarker(words, "/by");
+        int byIndex = CommandWords.findMarker(words, "/by");
         if (byIndex <= 1 || byIndex >= words.length - 1) {
             throw new InvalidCommandException("Use: deadline DESCRIPTION /by DATE");
         }
@@ -237,8 +237,8 @@ public class TaskLoader {
 
     /** Validates the required description, {@code /from}, and {@code /to} parts of an event. */
     private void validateEvent(String[] words) throws InvalidCommandException {
-        int fromIndex = findMarker(words, "/from");
-        int toIndex = findMarker(words, "/to");
+        int fromIndex = CommandWords.findMarker(words, "/from");
+        int toIndex = CommandWords.findMarker(words, "/to");
         boolean isFromMarkerMissing = fromIndex == words.length;
         boolean isToMarkerMissing = toIndex == words.length;
         boolean isDescriptionMissing = fromIndex <= 1;
@@ -249,16 +249,6 @@ public class TaskLoader {
                 || areMarkersOutOfOrder || isStartMissing || isEndMissing) {
             throw new InvalidCommandException("Use: event DESCRIPTION /from START /to END");
         }
-    }
-
-    /** Finds a formatting marker, returning the array length when it is absent. */
-    private int findMarker(String[] words, String marker) {
-        for (int i = 0; i < words.length; i++) {
-            if (words[i].equals(marker)) {
-                return i;
-            }
-        }
-        return words.length;
     }
 
     /** Converts and validates the one-based task number in a mark command. */
