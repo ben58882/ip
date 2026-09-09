@@ -239,8 +239,14 @@ public class TaskLoader {
     private void validateEvent(String[] words) throws InvalidCommandException {
         int fromIndex = findMarker(words, "/from");
         int toIndex = findMarker(words, "/to");
-        if (fromIndex == words.length || toIndex == words.length
-                || fromIndex <= 1 || toIndex <= fromIndex + 1 || toIndex == words.length - 1) {
+        boolean isFromMarkerMissing = fromIndex == words.length;
+        boolean isToMarkerMissing = toIndex == words.length;
+        boolean isDescriptionMissing = fromIndex <= 1;
+        boolean areMarkersOutOfOrder = toIndex < fromIndex;
+        boolean isStartMissing = toIndex == fromIndex + 1;
+        boolean isEndMissing = toIndex == words.length - 1;
+        if (isFromMarkerMissing || isToMarkerMissing || isDescriptionMissing
+                || areMarkersOutOfOrder || isStartMissing || isEndMissing) {
             throw new InvalidCommandException("Use: event DESCRIPTION /from START /to END");
         }
     }

@@ -103,4 +103,25 @@ class TaskLoaderTest {
         assertTrue(loader.addTask("bye", new Task[1], new int[] {0}, false));
         assertFalse(loader.addTask("bye later", new Task[1], new int[] {0}, false));
     }
+
+    @Test
+    void addTask_invalidEventStructure_rejectsCommand() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+        String[] invalidCommands = {
+            "event /from 1/1/2029 /to 2/1/2029",
+            "event meeting 1/1/2029 /to 2/1/2029",
+            "event meeting /from 1/1/2029 2/1/2029",
+            "event meeting /to 2/1/2029 /from 1/1/2029",
+            "event meeting /from /to 2/1/2029",
+            "event meeting /from 1/1/2029 /to"
+        };
+
+        for (String command : invalidCommands) {
+            loader.addTask(command, tasks, taskCount, false);
+            assertEquals("Use: event DESCRIPTION /from START /to END", loader.getLastResponse());
+        }
+        assertEquals(0, taskCount[0]);
+    }
 }
