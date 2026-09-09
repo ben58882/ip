@@ -11,6 +11,11 @@ import javafx.stage.Stage;
 
 /** Starts and owns BenBot's JavaFX graphical interface. */
 public class Main extends Application {
+    private static final double INITIAL_WINDOW_WIDTH = 520;
+    private static final double INITIAL_WINDOW_HEIGHT = 680;
+    private static final double MINIMUM_WINDOW_WIDTH = 440;
+    private static final double MINIMUM_WINDOW_HEIGHT = 560;
+
     /** The chatbot instance shared with the graphical controller. */
     private final BenBot benBot = new BenBot();
 
@@ -30,12 +35,12 @@ public class Main extends Application {
         MainWindow controller = fxmlLoader.getController();
         controller.setBenBot(benBot);
 
-        Scene scene = new Scene(root, 520, 680);
+        Scene scene = new Scene(root, INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT);
         scene.getStylesheets().add(requireResource("/styles/main.css").toExternalForm());
 
         stage.setTitle("BenBot");
-        stage.setMinWidth(440);
-        stage.setMinHeight(560);
+        stage.setMinWidth(MINIMUM_WINDOW_WIDTH);
+        stage.setMinHeight(MINIMUM_WINDOW_HEIGHT);
         stage.setScene(scene);
         stage.show();
     }
