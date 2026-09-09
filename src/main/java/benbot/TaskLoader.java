@@ -32,69 +32,15 @@ public class TaskLoader {
      */
     public boolean addTask(String line, Task[] tasks, int[] taskCountPointer, boolean shouldPrint) {
         responseLines.clear();
-        int taskCount = taskCountPointer[0];
-        boolean shouldExit = false;
-
         try {
             if (line.isEmpty()) {
                 throw new InvalidCommandException("Please enter a command.");
             }
-            String[] words = line.split("\\s+");
-            String command = words[0];
-
-            if (command.equals("bye")) {
-                requireNoArguments(words, "bye");
-                printMessage(shouldPrint, "Bye. Hope to see you again soon!");
-                shouldExit = true;
-            } else if (command.equals("list")) {
-                requireNoArguments(words, "list");
-                printMessage(shouldPrint, "Here are the tasks in your list:");
-                for (int i = 0; i < taskCount; i++) {
-                    printMessage(shouldPrint, (i + 1) + "." + tasks[i]);
-                }
-            } else if (command.equals("todo")) {
-                requireDescription(words, "todo DESCRIPTION");
-                ensureTaskListHasSpace(taskCount);
-                tasks[taskCount] = new ToDo(words);
-                taskCount++;
-                printTaskAdded(tasks[taskCount - 1], taskCount, shouldPrint);
-            } else if (command.equals("deadline")) {
-                validateDeadline(words);
-                ensureTaskListHasSpace(taskCount);
-                tasks[taskCount] = new Deadline(words);
-                taskCount++;
-                printTaskAdded(tasks[taskCount - 1], taskCount, shouldPrint);
-            } else if (command.equals("event")) {
-                validateEvent(words);
-                ensureTaskListHasSpace(taskCount);
-                tasks[taskCount] = new Event(words);
-                taskCount++;
-                printTaskAdded(tasks[taskCount - 1], taskCount, shouldPrint);
-            } else if (command.equals("delete")) {
-                int taskIndex = getTaskIndex(words, taskCount, "delete");
-                Task removedTask = tasks[taskIndex];
-                taskCount = removeTask(tasks, taskIndex, taskCount);
-                printTaskRemoved(removedTask, taskCount, shouldPrint);
-            } else if (command.equals("mark")) {
-                Task task = tasks[getTaskIndex(words, taskCount, "mark")];
-                task.markDone();
-                printMessage(shouldPrint, "Nice! I've marked this task as done:", "  " + task);
-            } else if (command.equals("unmark")) {
-                Task task = tasks[getTaskIndex(words, taskCount, "unmark")];
-                task.markUndone();
-                printMessage(shouldPrint, "OK, I've marked this task as not done yet:", "  " + task);
-            } else if (command.equals("find")) {
-                requireDescription(words, "find KEYWORD");
-                String keyword = line.substring(command.length()).trim();
-                printMatchingTasks(keyword, tasks, taskCount, shouldPrint);
-            } else {
-                throw new InvalidCommandException("I don't know what that means.");
-            }
+            return executeCommand(line, tasks, taskCountPointer, shouldPrint);
         } catch (BenBotException e) {
             printMessage(shouldPrint, e.getMessage());
+            return false;
         }
-        taskCountPointer[0] = taskCount;
-        return shouldExit;
     }
 
     /**
@@ -105,6 +51,104 @@ public class TaskLoader {
      */
     public String getLastResponse() {
         return String.join(System.lineSeparator(), responseLines);
+    }
+
+    /** Dispatches a valid, non-empty command to the operation that handles it. */
+    private boolean executeCommand(String line, Task[] tasks, int[] taskCountPointer,
+                                   boolean shouldPrint) throws BenBotException {
+        String[] words = line.split("\\s+");
+        String command = words[0];
+
+        switch (command) {
+            case "bye" -> {
+                sayGoodbye(words, shouldPrint);
+                return true;
+            }
+            case "list" -> listTasks(words, tasks, taskCountPointer[0], shouldPrint);
+            case "todo" -> addTodoTask(words, tasks, taskCountPointer, shouldPrint);
+            case "deadline" -> addDeadlineTask(words, tasks, taskCountPointer, shouldPrint);
+            case "event" -> addEventTask(words, tasks, taskCountPointer, shouldPrint);
+            case "delete" -> deleteTask(words, tasks, taskCountPointer, shouldPrint);
+            case "mark" -> markTaskDone(words, tasks, taskCountPointer[0], shouldPrint);
+            case "unmark" -> markTaskUndone(words, tasks, taskCountPointer[0], shouldPrint);
+            case "find" -> findTasks(line, words, tasks, taskCountPointer[0], shouldPrint);
+            default -> throw new InvalidCommandException("I don't know what that means.");
+        }
+        return false;
+    }
+
+    private void sayGoodbye(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        requireNoArguments(words, "bye");
+        printMessage(shouldPrint, "Bye. Hope to see you again soon!");
+    }
+
+    private void listTasks(String[] words, Task[] tasks, int taskCount, boolean shouldPrint)
+            throws InvalidCommandException {
+        requireNoArguments(words, "list");
+        printMessage(shouldPrint, "Here are the tasks in your list:");
+        for (int i = 0; i < taskCount; i++) {
+            printMessage(shouldPrint, (i + 1) + "." + tasks[i]);
+        }
+    }
+
+    private void addTodoTask(String[] words, Task[] tasks, int[] taskCountPointer,
+                             boolean shouldPrint) throws BenBotException {
+        requireDescription(words, "todo DESCRIPTION");
+        ensureTaskListHasSpace(taskCountPointer[0]);
+        appendTask(new ToDo(words), tasks, taskCountPointer, shouldPrint);
+    }
+
+    private void addDeadlineTask(String[] words, Task[] tasks, int[] taskCountPointer,
+                                 boolean shouldPrint) throws BenBotException {
+        validateDeadline(words);
+        ensureTaskListHasSpace(taskCountPointer[0]);
+        appendTask(new Deadline(words), tasks, taskCountPointer, shouldPrint);
+    }
+
+    private void addEventTask(String[] words, Task[] tasks, int[] taskCountPointer,
+                              boolean shouldPrint) throws BenBotException {
+        validateEvent(words);
+        ensureTaskListHasSpace(taskCountPointer[0]);
+        appendTask(new Event(words), tasks, taskCountPointer, shouldPrint);
+    }
+
+    private void appendTask(Task task, Task[] tasks, int[] taskCountPointer, boolean shouldPrint) {
+        int taskCount = taskCountPointer[0];
+        tasks[taskCount] = task;
+        taskCount++;
+        taskCountPointer[0] = taskCount;
+        printTaskAdded(task, taskCount, shouldPrint);
+    }
+
+    private void deleteTask(String[] words, Task[] tasks, int[] taskCountPointer,
+                            boolean shouldPrint) throws InvalidTaskNumberException {
+        int taskCount = taskCountPointer[0];
+        int taskIndex = getTaskIndex(words, taskCount, "delete");
+        Task removedTask = tasks[taskIndex];
+        taskCount = removeTask(tasks, taskIndex, taskCount);
+        taskCountPointer[0] = taskCount;
+        printTaskRemoved(removedTask, taskCount, shouldPrint);
+    }
+
+    private void markTaskDone(String[] words, Task[] tasks, int taskCount,
+                              boolean shouldPrint) throws InvalidTaskNumberException {
+        Task task = tasks[getTaskIndex(words, taskCount, "mark")];
+        task.markDone();
+        printMessage(shouldPrint, "Nice! I've marked this task as done:", "  " + task);
+    }
+
+    private void markTaskUndone(String[] words, Task[] tasks, int taskCount,
+                                boolean shouldPrint) throws InvalidTaskNumberException {
+        Task task = tasks[getTaskIndex(words, taskCount, "unmark")];
+        task.markUndone();
+        printMessage(shouldPrint, "OK, I've marked this task as not done yet:", "  " + task);
+    }
+
+    private void findTasks(String line, String[] words, Task[] tasks, int taskCount,
+                           boolean shouldPrint) throws InvalidCommandException {
+        requireDescription(words, "find KEYWORD");
+        String keyword = line.substring(words[0].length()).trim();
+        printMatchingTasks(keyword, tasks, taskCount, shouldPrint);
     }
 
     /** Prints the confirmation shown after adding a task. */
