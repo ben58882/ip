@@ -42,34 +42,51 @@ public class StoredTaskLoader {
         }
 
         try {
-            int taskCountBeforeLoading = taskCountPointer[0];
-            String storedData = Files.readString(storedTaskPath);
-            String[] commands = storedData.split("\\R");
-            for (int i = 0; i < commands.length; i++) {
-                String command = commands[i];
-                if (!command.isBlank()) {
-                    int taskCountBefore = taskCountPointer[0];
-                    boolean isMarkCommand = command.startsWith("mark ");
-                    int markedTaskIndex = getMarkedTaskIndex(command, taskCountBefore);
-                    boolean wasMarkedTaskDone = isMarkCommand && markedTaskIndex >= 0
-                            && tasks[markedTaskIndex].isDone();
-                    taskLoader.addTask(command, tasks, taskCountPointer, false);
-                    boolean addedTask = taskCountPointer[0] == taskCountBefore + 1;
-                    boolean markedTask = isMarkCommand && markedTaskIndex >= 0
-                            && !wasMarkedTaskDone && tasks[markedTaskIndex].isDone();
-                    if (!addedTask && !markedTask) {
-                        throw new IOException("Stored-task file is corrupted at line " + (i + 1)
-                                + ". Each line must be a valid todo, deadline, event, or mark command.");
-                    }
-                }
-            }
-            int loadedTaskCount = taskCountPointer[0] - taskCountBeforeLoading;
-            String taskWord = loadedTaskCount == 1 ? "task" : "tasks";
-            System.out.println(loadedTaskCount + " " + taskWord + " already in storage.");
-            System.out.println(BenBot.DIVIDER);
+            int loadedTaskCount = loadStoredTasks(taskLoader, tasks, taskCountPointer);
+            printLoadedTaskCount(loadedTaskCount);
         } catch (IOException e) {
             System.out.println("ERROR: " + e.getMessage());
         }
+    }
+
+    /** Reads and validates the stored commands, returning the number of tasks added. */
+    private int loadStoredTasks(TaskLoader taskLoader, Task[] tasks, int[] taskCountPointer)
+            throws IOException {
+        int taskCountBeforeLoading = taskCountPointer[0];
+        String storedData = Files.readString(storedTaskPath);
+        String[] commands = storedData.split("\\R");
+        for (int i = 0; i < commands.length; i++) {
+            if (commands[i].isBlank()) {
+                continue;
+            }
+            loadStoredCommand(commands[i], i + 1, taskLoader, tasks, taskCountPointer);
+        }
+        return taskCountPointer[0] - taskCountBeforeLoading;
+    }
+
+    /** Loads one command or reports its line as corrupted when it does not change valid state. */
+    private void loadStoredCommand(String command, int lineNumber, TaskLoader taskLoader,
+                                   Task[] tasks, int[] taskCountPointer) throws IOException {
+        int taskCountBefore = taskCountPointer[0];
+        int markedTaskIndex = getMarkedTaskIndex(command, taskCountBefore);
+        boolean wasMarkedTaskDone = markedTaskIndex >= 0 && tasks[markedTaskIndex].isDone();
+
+        taskLoader.addTask(command, tasks, taskCountPointer, false);
+
+        boolean wasTaskAdded = taskCountPointer[0] == taskCountBefore + 1;
+        boolean wasTaskMarked = markedTaskIndex >= 0
+                && !wasMarkedTaskDone && tasks[markedTaskIndex].isDone();
+        if (wasTaskAdded || wasTaskMarked) {
+            return;
+        }
+        throw new IOException("Stored-task file is corrupted at line " + lineNumber
+                + ". Each line must be a valid todo, deadline, event, or mark command.");
+    }
+
+    private void printLoadedTaskCount(int loadedTaskCount) {
+        String taskWord = loadedTaskCount == 1 ? "task" : "tasks";
+        System.out.println(loadedTaskCount + " " + taskWord + " already in storage.");
+        System.out.println(BenBot.DIVIDER);
     }
 
     /** Returns the zero-based task index in a stored mark command, or -1 when it is invalid. */
