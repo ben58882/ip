@@ -51,7 +51,28 @@ class TaskStorageTest {
         assertEquals("todo read book", tasks[0].toStorageString());
         assertEquals("deadline return book /by 1/12/2029", tasks[1].toStorageString());
         assertTrue(tasks[1].isDone());
-        assertTrue(output.contains("2 tasks already in storage."));
+        assertTrue(output.contains("2 items already in storage."));
+    }
+
+    @Test
+    void storeAndLoad_contact_preservesContactDetails() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        TaskLoader sourceLoader = new TaskLoader(1);
+        sourceLoader.addTask("contact Alice Tan /phone 91234567 /email alice@example.com",
+                new Task[1], new int[] {0}, false);
+        new TaskDataStore(storedTaskPath).store(
+                new Task[1], 0, sourceLoader.getExtensionStorageCommands());
+
+        TaskLoader loadedLoader = new TaskLoader(1);
+        String loadOutput = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
+                .load(loadedLoader, new Task[1], new int[] {0}));
+        loadedLoader.addTask("contacts", new Task[1], new int[] {0}, false);
+
+        assertEquals("contact Alice Tan /phone 91234567 /email alice@example.com"
+                        + System.lineSeparator(), Files.readString(storedTaskPath));
+        assertTrue(loadOutput.contains("1 item already in storage."));
+        assertTrue(loadedLoader.getLastResponse().contains(
+                "1.[C] Alice Tan (phone: 91234567; email: alice@example.com)"));
     }
 
     @Test

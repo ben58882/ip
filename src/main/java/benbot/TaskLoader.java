@@ -13,6 +13,9 @@ public class TaskLoader {
     /** The response lines produced while processing the most recent command. */
     private final List<String> responseLines = new ArrayList<>();
 
+    /** The contacts managed independently from the task list. */
+    private final EntityList<Contact> contacts = new EntityList<>();
+
     /**
      * Creates a command processor with the specified maximum task capacity.
      *
@@ -74,6 +77,16 @@ public class TaskLoader {
         return String.join(System.lineSeparator(), responseLines);
     }
 
+    /** Returns commands that recreate all non-task entities managed by this processor. */
+    List<String> getExtensionStorageCommands() {
+        return contacts.toStorageCommands();
+    }
+
+    /** Returns the total number of tasks and non-task entities currently managed. */
+    int getStoredItemCount(int taskCount) {
+        return taskCount + contacts.size();
+    }
+
     /** Dispatches a valid, non-empty command to the operation that handles it. */
     private boolean executeCommand(String line, Task[] tasks, int[] taskCountPointer,
                                    boolean shouldPrint) throws BenBotException {
@@ -93,9 +106,38 @@ public class TaskLoader {
             case "mark" -> markTaskDone(words, tasks, taskCountPointer[0], shouldPrint);
             case "unmark" -> markTaskUndone(words, tasks, taskCountPointer[0], shouldPrint);
             case "find" -> findTasks(line, words, tasks, taskCountPointer[0], shouldPrint);
+            case "contact" -> addContact(words, shouldPrint);
+            case "contacts" -> listContacts(words, shouldPrint);
+            case "delete-contact" -> deleteContact(words, shouldPrint);
             default -> throw new InvalidCommandException("I don't know what that means.");
         }
         return false;
+    }
+
+    private void addContact(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        Contact contact = Contact.createFromCommand(words);
+        contacts.add(contact);
+        String contactWord = contacts.size() == 1 ? "contact" : "contacts";
+        printMessage(shouldPrint,
+                "Got it. I've added this contact:",
+                "  " + contact,
+                "Now you have " + contacts.size() + " " + contactWord + ".");
+    }
+
+    private void listContacts(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        requireNoArguments(words, "contacts");
+        printMessage(shouldPrint, "Here are your contacts:");
+        printMessage(shouldPrint, contacts.toNumberedDisplayLines());
+    }
+
+    private void deleteContact(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        int contactIndex = getEntityIndex(words, contacts.size(), "delete-contact", "contact");
+        Contact removedContact = contacts.remove(contactIndex);
+        String contactWord = contacts.size() == 1 ? "contact" : "contacts";
+        printMessage(shouldPrint,
+                "Noted. I've removed this contact:",
+                "  " + removedContact,
+                "Now you have " + contacts.size() + " " + contactWord + ".");
     }
 
     private void sayGoodbye(String[] words, boolean shouldPrint) throws InvalidCommandException {
@@ -290,6 +332,26 @@ public class TaskLoader {
             return taskNumber - 1;
         } catch (NumberFormatException e) {
             throw new InvalidTaskNumberException("The task number must be a whole number.");
+        }
+    }
+
+    /** Converts and validates a one-based number for a non-task entity. */
+    private int getEntityIndex(String[] words, int entityCount, String command, String entityName)
+            throws InvalidCommandException {
+        if (words.length != 2) {
+            throw new InvalidCommandException(
+                    "Use: " + command + " " + entityName.toUpperCase(Locale.ROOT) + "_NUMBER");
+        }
+
+        try {
+            int entityNumber = Integer.parseInt(words[1]);
+            if (entityNumber < 1 || entityNumber > entityCount) {
+                throw new InvalidCommandException("That " + entityName + " number does not exist.");
+            }
+            return entityNumber - 1;
+        } catch (NumberFormatException e) {
+            throw new InvalidCommandException(
+                    "The " + entityName + " number must be a whole number.");
         }
     }
 

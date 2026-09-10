@@ -136,4 +136,50 @@ class TaskLoaderTest {
         assertThrows(AssertionError.class, () ->
                 loader.addTask("list", new Task[1], new int[] {2}, false));
     }
+
+    @Test
+    void addTask_contactCommands_manageContactsSeparatelyFromTasks() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        loader.addTask("contact Alice Tan /phone 91234567 /email alice@example.com",
+                tasks, taskCount, false);
+        loader.addTask("contact Bob /phone 87654321 /email bob@example.com",
+                tasks, taskCount, false);
+        loader.addTask("contacts", tasks, taskCount, false);
+
+        assertEquals(0, taskCount[0]);
+        assertTrue(loader.getLastResponse().contains(
+                "1.[C] Alice Tan (phone: 91234567; email: alice@example.com)"));
+        assertTrue(loader.getLastResponse().contains(
+                "2.[C] Bob (phone: 87654321; email: bob@example.com)"));
+
+        loader.addTask("delete-contact 1", tasks, taskCount, false);
+        loader.addTask("contacts", tasks, taskCount, false);
+
+        assertFalse(loader.getLastResponse().contains("Alice Tan"));
+        assertTrue(loader.getLastResponse().contains("1.[C] Bob"));
+    }
+
+    @Test
+    void addTask_invalidContactCommands_leaveContactsUnchanged() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+        String[] invalidCommands = {
+            "contact Alice /email alice@example.com /phone 91234567",
+            "contact Alice /phone /email alice@example.com",
+            "contact Alice /phone 91234567 /email",
+            "delete-contact one",
+            "delete-contact 1"
+        };
+
+        for (String command : invalidCommands) {
+            loader.addTask(command, tasks, taskCount, false);
+        }
+        loader.addTask("contacts", tasks, taskCount, false);
+
+        assertEquals("Here are your contacts:", loader.getLastResponse());
+    }
 }

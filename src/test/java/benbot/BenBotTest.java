@@ -29,7 +29,7 @@ class BenBotTest {
 
         assertEquals(1, taskCount[0]);
         assertEquals("todo read book", tasks[0].toStorageString());
-        assertTrue(output.contains("1 task already in storage."));
+        assertTrue(output.contains("1 item already in storage."));
     }
 
     @Test
