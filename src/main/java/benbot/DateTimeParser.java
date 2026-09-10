@@ -3,8 +3,12 @@ package benbot;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
+import java.time.temporal.ChronoField;
+import java.util.Locale;
+import java.util.Map;
 
 /** Converts user-entered dates into the date-time values used by scheduled tasks. */
 public final class DateTimeParser {
@@ -17,11 +21,14 @@ public final class DateTimeParser {
             .ofPattern("d/M/uuuu HHmm").withResolverStyle(ResolverStyle.STRICT);
 
     /** Format used when showing a date without a time. */
-    private static final DateTimeFormatter DISPLAY_DATE = DateTimeFormatter.ofPattern("MMM dd uuuu");
+    private static final DateTimeFormatter DISPLAY_DATE =
+            DateTimeFormatter.ofPattern("MMM dd uuuu", Locale.ENGLISH);
 
     /** Format used when showing a date and time. */
-    private static final DateTimeFormatter DISPLAY_DATE_TIME =
-            DateTimeFormatter.ofPattern("MMM dd uuuu h:mm a");
+    private static final DateTimeFormatter DISPLAY_DATE_TIME = new DateTimeFormatterBuilder()
+            .appendPattern("MMM dd uuuu h:mm ")
+            .appendText(ChronoField.AMPM_OF_DAY, Map.of(0L, "am", 1L, "pm"))
+            .toFormatter(Locale.ENGLISH);
 
     /** Prevents construction because this class only contains utility methods. */
     private DateTimeParser() {

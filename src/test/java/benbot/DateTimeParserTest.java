@@ -48,6 +48,12 @@ class DateTimeParserTest {
     }
 
     @Test
+    void format_morningTime_returnsLowercaseAm() {
+        assertEquals("Dec 02 2019 6:00 am", DateTimeParser.format(
+                LocalDateTime.of(2019, 12, 2, 6, 0), true));
+    }
+
+    @Test
     void formatForStorage_dateAndTime_returnsParseableValue() throws InvalidCommandException {
         LocalDateTime dateTime = LocalDateTime.of(2019, 12, 2, 18, 0);
         String storedValue = DateTimeParser.formatForStorage(dateTime, true);
