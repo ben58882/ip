@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /** Stores BenBot's tasks so that they can be reloaded in a later run. */
 public class TaskDataStore {
@@ -45,18 +48,18 @@ public class TaskDataStore {
             Files.createDirectories(parentDirectory);
         }
 
-        StringBuilder storedData = new StringBuilder();
-        for (int i = 0; i < taskCount; i++) {
-            assert tasks[i] != null : "Every task selected for storage must be initialized";
-            storedData.append(tasks[i].toStorageString()).append(System.lineSeparator());
-        }
-        for (int i = 0; i < taskCount; i++) {
-            if (tasks[i].isDone()) {
-                storedData.append("mark ").append(i + 1).append(System.lineSeparator());
-            }
-        }
+        assert IntStream.range(0, taskCount).allMatch(index -> tasks[index] != null)
+                : "Every task selected for storage must be initialized";
+        Stream<String> taskCommands = IntStream.range(0, taskCount)
+                .mapToObj(index -> tasks[index].toStorageString());
+        Stream<String> markCommands = IntStream.range(0, taskCount)
+                .filter(index -> tasks[index].isDone())
+                .mapToObj(index -> "mark " + (index + 1));
+        String storedData = Stream.concat(taskCommands, markCommands)
+                .map(command -> command + System.lineSeparator())
+                .collect(Collectors.joining());
 
-        Files.writeString(storedTaskPath, storedData.toString(),
+        Files.writeString(storedTaskPath, storedData,
                 StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     }
 }

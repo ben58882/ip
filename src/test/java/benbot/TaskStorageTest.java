@@ -20,13 +20,17 @@ class TaskStorageTest {
         Path storedTaskPath = temporaryDirectory.resolve("data/stored-task");
         Task firstTask = new Task("read book");
         Task secondTask = new Task("buy pen");
+        Task thirdTask = new Task("book flight");
+        firstTask.markDone();
         secondTask.markDone();
 
-        new TaskDataStore(storedTaskPath).store(new Task[] {firstTask, secondTask}, 2);
+        new TaskDataStore(storedTaskPath).store(new Task[] {firstTask, secondTask, thirdTask}, 3);
 
         String storedData = Files.readString(storedTaskPath);
         assertEquals("todo read book" + System.lineSeparator()
                         + "todo buy pen" + System.lineSeparator()
+                        + "todo book flight" + System.lineSeparator()
+                        + "mark 1" + System.lineSeparator()
                         + "mark 2" + System.lineSeparator(),
                 storedData);
     }

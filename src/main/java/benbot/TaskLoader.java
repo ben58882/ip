@@ -3,6 +3,7 @@ package benbot;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.IntStream;
 
 /** Processes BenBot commands and updates the in-memory task list. */
 public class TaskLoader {
@@ -194,12 +195,12 @@ public class TaskLoader {
         String normalizedKeyword = keyword.toLowerCase(Locale.ROOT);
         printMessage(shouldPrint, "Here are the matching tasks in your list:");
 
-        for (int i = 0; i < taskCount; i++) {
-            String description = tasks[i].getDescription().toLowerCase(Locale.ROOT);
-            if (description.contains(normalizedKeyword)) {
-                printMessage(shouldPrint, (i + 1) + "." + tasks[i]);
-            }
-        }
+        String[] matchingTasks = IntStream.range(0, taskCount)
+                .filter(index -> tasks[index].getDescription().toLowerCase(Locale.ROOT)
+                        .contains(normalizedKeyword))
+                .mapToObj(index -> (index + 1) + "." + tasks[index])
+                .toArray(String[]::new);
+        printMessage(shouldPrint, matchingTasks);
     }
 
     /** Prints responses only when output is enabled. */

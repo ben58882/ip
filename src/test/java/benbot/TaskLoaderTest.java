@@ -51,16 +51,19 @@ class TaskLoaderTest {
     @Test
     void addTask_find_ignoresCaseAndDoesNotChangeTaskList() throws Exception {
         TaskLoader loader = new TaskLoader(3);
-        Task[] tasks = {new Task("Read Book"), new Task("buy pen"), null};
-        int[] taskCount = {2};
+        Task[] tasks = {new Task("Read Book"), new Task("buy pen"), new Task("Book flight")};
+        int[] taskCount = {3};
 
         String output = OutputCapture.capture(() ->
                 loader.addTask("find BOOK", tasks, taskCount, true));
 
-        assertEquals(2, taskCount[0]);
+        assertEquals(3, taskCount[0]);
         assertTrue(output.contains("Here are the matching tasks in your list:"));
         assertTrue(output.contains("1.[T][ ] Read Book"));
         assertFalse(output.contains("2.[T][ ] buy pen"));
+        assertTrue(output.contains("3.[T][ ] Book flight"));
+        assertTrue(output.indexOf("1.[T][ ] Read Book")
+                < output.indexOf("3.[T][ ] Book flight"));
     }
 
     @Test
