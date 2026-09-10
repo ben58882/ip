@@ -18,6 +18,7 @@ public class TaskLoader {
      * @param maxTasks the maximum number of tasks that may be stored.
      */
     public TaskLoader(int maxTasks) {
+        assert maxTasks > 0 : "Task-list capacity must be positive";
         this.maxTasks = maxTasks;
     }
 
@@ -31,16 +32,35 @@ public class TaskLoader {
      * @return whether the command requests that BenBot exits.
      */
     public boolean addTask(String line, Task[] tasks, int[] taskCountPointer, boolean shouldPrint) {
+        assert line != null : "A command line must be provided";
+        assert tasks != null && tasks.length >= maxTasks
+                : "The task array must provide the configured capacity";
+        assert taskCountPointer != null && taskCountPointer.length == 1
+                : "The task count holder must contain exactly one value";
+
+        int taskCount = taskCountPointer[0];
+        assert taskCount >= 0 && taskCount <= maxTasks
+                : "The task count must remain within the configured capacity";
+        assert hasPopulatedTaskPrefix(tasks, taskCount)
+                : "Every task before the task count must be initialized";
+
         responseLines.clear();
+        boolean shouldExit = false;
         try {
             if (line.isEmpty()) {
                 throw new InvalidCommandException("Please enter a command.");
             }
-            return executeCommand(line, tasks, taskCountPointer, shouldPrint);
+            shouldExit = executeCommand(line, tasks, taskCountPointer, shouldPrint);
         } catch (BenBotException e) {
             printMessage(shouldPrint, e.getMessage());
-            return false;
         }
+
+        int updatedTaskCount = taskCountPointer[0];
+        assert updatedTaskCount >= 0 && updatedTaskCount <= maxTasks
+                : "Processing a command must leave the task count within capacity";
+        assert hasPopulatedTaskPrefix(tasks, updatedTaskCount)
+                : "Processing a command must leave all counted tasks initialized";
+        return shouldExit;
     }
 
     /**
@@ -199,6 +219,9 @@ public class TaskLoader {
      * @return the new number of stored tasks
      */
     private int removeTask(Task[] tasks, int taskIndex, int taskCount) {
+        assert taskIndex >= 0 && taskIndex < taskCount
+                : "Only an existing task can be removed";
+        assert tasks[taskIndex] != null : "The task selected for removal must be initialized";
         for (int i = taskIndex; i < taskCount - 1; i++) {
             tasks[i] = tasks[i + 1];
         }
@@ -267,5 +290,18 @@ public class TaskLoader {
         } catch (NumberFormatException e) {
             throw new InvalidTaskNumberException("The task number must be a whole number.");
         }
+    }
+
+    /** Returns whether the occupied prefix of a task array contains no gaps. */
+    private boolean hasPopulatedTaskPrefix(Task[] tasks, int taskCount) {
+        if (taskCount < 0 || taskCount > tasks.length) {
+            return false;
+        }
+        for (int i = 0; i < taskCount; i++) {
+            if (tasks[i] == null) {
+                return false;
+            }
+        }
+        return true;
     }
 }

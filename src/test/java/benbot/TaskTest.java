@@ -2,6 +2,7 @@ package benbot;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -48,5 +49,10 @@ class TaskTest {
 
         assertEquals("[T][ ] read book", task.toString());
         assertEquals("todo read book", task.toStorageString());
+    }
+
+    @Test
+    void task_blankDescription_throwsAssertionError() {
+        assertThrows(AssertionError.class, () -> new Task(" "));
     }
 }
