@@ -39,11 +39,17 @@ public class TaskDataStore {
      * @throws IOException if the data file or its parent directory cannot be written.
      */
     public void store(Task[] tasks, int taskCount) throws IOException {
+        assert tasks != null : "A task array must be provided for storage";
+        assert taskCount >= 0 && taskCount <= tasks.length
+                : "Only tasks within the array can be stored";
+
         Path parentDirectory = storedTaskPath.getParent();
         if (parentDirectory != null) {
             Files.createDirectories(parentDirectory);
         }
 
+        assert IntStream.range(0, taskCount).allMatch(index -> tasks[index] != null)
+                : "Every task selected for storage must be initialized";
         Stream<String> taskCommands = IntStream.range(0, taskCount)
                 .mapToObj(index -> tasks[index].toStorageString());
         Stream<String> markCommands = IntStream.range(0, taskCount)
