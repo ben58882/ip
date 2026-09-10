@@ -11,6 +11,8 @@ import javafx.util.Duration;
 
 /** Controls the main BenBot conversation window defined in FXML. */
 public class MainWindow {
+    private static final Duration EXIT_DELAY = Duration.millis(900);
+
     /** The scrollable conversation viewport. */
     @FXML
     private ScrollPane scrollPane;
@@ -67,7 +69,7 @@ public class MainWindow {
         if (benBot.isExitRequested()) {
             userInput.setDisable(true);
             sendButton.setDisable(true);
-            PauseTransition exitDelay = new PauseTransition(Duration.millis(900));
+            PauseTransition exitDelay = new PauseTransition(EXIT_DELAY);
             exitDelay.setOnFinished(event -> Platform.exit());
             exitDelay.play();
         }
