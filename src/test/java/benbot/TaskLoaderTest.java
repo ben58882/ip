@@ -217,4 +217,42 @@ class TaskLoaderTest {
 
         assertEquals("Here are your notes:", loader.getLastResponse());
     }
+
+    @Test
+    void addTask_expenseCommands_manageExpensesSeparatelyFromTasks() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        loader.addTask("expense lunch /amount 12.50", tasks, taskCount, false);
+        loader.addTask("expense bus fare /amount 2.40", tasks, taskCount, false);
+        loader.addTask("expenses", tasks, taskCount, false);
+
+        assertEquals(0, taskCount[0]);
+        assertTrue(loader.getLastResponse().contains("1.[$] lunch ($12.50)"));
+        assertTrue(loader.getLastResponse().contains("2.[$] bus fare ($2.40)"));
+        assertTrue(loader.getLastResponse().contains("Total expenses: $14.90"));
+
+        loader.addTask("delete-expense 1", tasks, taskCount, false);
+        loader.addTask("expenses", tasks, taskCount, false);
+
+        assertFalse(loader.getLastResponse().contains("lunch"));
+        assertTrue(loader.getLastResponse().contains("1.[$] bus fare ($2.40)"));
+        assertTrue(loader.getLastResponse().contains("Total expenses: $2.40"));
+    }
+
+    @Test
+    void addTask_invalidExpenseCommands_leaveExpensesUnchanged() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        loader.addTask("expense lunch /amount nope", tasks, taskCount, false);
+        loader.addTask("expense lunch /amount -1", tasks, taskCount, false);
+        loader.addTask("delete-expense 1", tasks, taskCount, false);
+        loader.addTask("expenses", tasks, taskCount, false);
+
+        assertEquals("Here are your expenses:" + System.lineSeparator()
+                + "Total expenses: $0.00", loader.getLastResponse());
+    }
 }

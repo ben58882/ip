@@ -81,7 +81,7 @@ public class StoredTaskLoader {
             return;
         }
         throw new IOException("Stored-task file is corrupted at line " + lineNumber
-                + ". Each line must be a valid todo, deadline, event, contact, note, or mark command.");
+                + ". Each line must be a valid todo, deadline, event, contact, note, expense, or mark command.");
     }
 
     private void printLoadedItemCount(int loadedItemCount) {

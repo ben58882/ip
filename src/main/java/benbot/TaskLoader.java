@@ -19,6 +19,9 @@ public class TaskLoader {
     /** The notes managed independently from the task list. */
     private final EntityList<Note> notes = new EntityList<>();
 
+    /** The expenses managed independently from the task list. */
+    private final ExpenseTracker expenseTracker = new ExpenseTracker();
+
     /**
      * Creates a command processor with the specified maximum task capacity.
      *
@@ -84,12 +87,13 @@ public class TaskLoader {
     List<String> getExtensionStorageCommands() {
         List<String> commands = new ArrayList<>(contacts.toStorageCommands());
         commands.addAll(notes.toStorageCommands());
+        commands.addAll(expenseTracker.toStorageCommands());
         return List.copyOf(commands);
     }
 
     /** Returns the total number of tasks and non-task entities currently managed. */
     int getStoredItemCount(int taskCount) {
-        return taskCount + contacts.size() + notes.size();
+        return taskCount + contacts.size() + notes.size() + expenseTracker.size();
     }
 
     /** Dispatches a valid, non-empty command to the operation that handles it. */
@@ -117,6 +121,9 @@ public class TaskLoader {
             case "note" -> addNote(words, shouldPrint);
             case "notes" -> listNotes(words, shouldPrint);
             case "delete-note" -> deleteNote(words, shouldPrint);
+            case "expense" -> addExpense(words, shouldPrint);
+            case "expenses" -> listExpenses(words, shouldPrint);
+            case "delete-expense" -> deleteExpense(words, shouldPrint);
             default -> throw new InvalidCommandException("I don't know what that means.");
         }
         return false;
@@ -172,6 +179,34 @@ public class TaskLoader {
                 "Noted. I've removed this note:",
                 "  " + removedNote,
                 "Now you have " + notes.size() + " " + noteWord + ".");
+    }
+
+    private void addExpense(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        Expense expense = Expense.createFromCommand(words);
+        expenseTracker.add(expense);
+        String expenseWord = expenseTracker.size() == 1 ? "expense" : "expenses";
+        printMessage(shouldPrint,
+                "Got it. I've added this expense:",
+                "  " + expense,
+                "Now you have " + expenseTracker.size() + " " + expenseWord + ".");
+    }
+
+    private void listExpenses(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        requireNoArguments(words, "expenses");
+        printMessage(shouldPrint, "Here are your expenses:");
+        printMessage(shouldPrint, expenseTracker.toNumberedDisplayLines());
+        printMessage(shouldPrint, "Total expenses: $" + expenseTracker.getTotalAmount().toPlainString());
+    }
+
+    private void deleteExpense(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        int expenseIndex = getEntityIndex(
+                words, expenseTracker.size(), "delete-expense", "expense");
+        Expense removedExpense = expenseTracker.remove(expenseIndex);
+        String expenseWord = expenseTracker.size() == 1 ? "expense" : "expenses";
+        printMessage(shouldPrint,
+                "Noted. I've removed this expense:",
+                "  " + removedExpense,
+                "Now you have " + expenseTracker.size() + " " + expenseWord + ".");
     }
 
     private void sayGoodbye(String[] words, boolean shouldPrint) throws InvalidCommandException {

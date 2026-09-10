@@ -3,6 +3,7 @@ package benbot;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /** Owns an ordered collection of one type of non-task entity. */
 final class EntityList<T extends StorableEntity> {
@@ -38,5 +39,10 @@ final class EntityList<T extends StorableEntity> {
         return entities.stream()
                 .map(StorableEntity::toStorageString)
                 .toList();
+    }
+
+    /** Returns a sequential stream of the entities in collection order. */
+    Stream<T> stream() {
+        return entities.stream();
     }
 }

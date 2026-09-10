@@ -95,6 +95,27 @@ class TaskStorageTest {
     }
 
     @Test
+    void storeAndLoad_expense_preservesDescriptionAndAmount() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        TaskLoader sourceLoader = new TaskLoader(1);
+        sourceLoader.addTask("expense bus fare /amount 2.4",
+                new Task[1], new int[] {0}, false);
+        new TaskDataStore(storedTaskPath).store(
+                new Task[1], 0, sourceLoader.getExtensionStorageCommands());
+
+        TaskLoader loadedLoader = new TaskLoader(1);
+        String loadOutput = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
+                .load(loadedLoader, new Task[1], new int[] {0}));
+        loadedLoader.addTask("expenses", new Task[1], new int[] {0}, false);
+
+        assertEquals("expense bus fare /amount 2.40" + System.lineSeparator(),
+                Files.readString(storedTaskPath));
+        assertTrue(loadOutput.contains("1 item already in storage."));
+        assertTrue(loadedLoader.getLastResponse().contains("1.[$] bus fare ($2.40)"));
+        assertTrue(loadedLoader.getLastResponse().contains("Total expenses: $2.40"));
+    }
+
+    @Test
     void load_missingFile_reportsFreshStartWithoutChangingTasks() throws Exception {
         Path missingPath = temporaryDirectory.resolve("missing-task-file");
         Task[] tasks = new Task[1];
