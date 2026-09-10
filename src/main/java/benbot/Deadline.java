@@ -28,24 +28,14 @@ public class Deadline extends Task {
 
     /** Returns the task description before the {@code /by} marker. */
     private static String getDescription(String[] words) {
-        int byIndex = findMarker(words, "/by");
+        int byIndex = CommandWords.findMarker(words, "/by");
         return String.join(" ", Arrays.copyOfRange(words, 1, byIndex));
     }
 
     /** Returns the deadline date text after the {@code /by} marker. */
     private static String getDeadlineDateText(String[] words) {
-        int byIndex = findMarker(words, "/by");
+        int byIndex = CommandWords.findMarker(words, "/by");
         return String.join(" ", Arrays.copyOfRange(words, byIndex + 1, words.length));
-    }
-
-    /** Finds the location of a formatting marker in a command. */
-    private static int findMarker(String[] words, String marker) {
-        for (int i = 0; i < words.length; i++) {
-            if (words[i].equals(marker)) {
-                return i;
-            }
-        }
-        return words.length;
     }
 
     /** Returns the deadline in the chatbot's display format. */

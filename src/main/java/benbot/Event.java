@@ -39,31 +39,21 @@ public class Event extends Task {
 
     /** Returns the event description before the {@code /from} marker. */
     private static String getDescription(String[] words) {
-        int fromIndex = findMarker(words, "/from");
+        int fromIndex = CommandWords.findMarker(words, "/from");
         return String.join(" ", Arrays.copyOfRange(words, 1, fromIndex));
     }
 
     /** Returns the start-date text between the {@code /from} and {@code /to} markers. */
     private static String getStartDateText(String[] words) {
-        int fromIndex = findMarker(words, "/from");
-        int toIndex = findMarker(words, "/to");
+        int fromIndex = CommandWords.findMarker(words, "/from");
+        int toIndex = CommandWords.findMarker(words, "/to");
         return String.join(" ", Arrays.copyOfRange(words, fromIndex + 1, toIndex));
     }
 
     /** Returns the end-date text after the {@code /to} marker. */
     private static String getEndDateText(String[] words) {
-        int toIndex = findMarker(words, "/to");
+        int toIndex = CommandWords.findMarker(words, "/to");
         return String.join(" ", Arrays.copyOfRange(words, toIndex + 1, words.length));
-    }
-
-    /** Finds the location of a formatting marker in a command. */
-    private static int findMarker(String[] words, String marker) {
-        for (int i = 0; i < words.length; i++) {
-            if (words[i].equals(marker)) {
-                return i;
-            }
-        }
-        return words.length;
     }
 
     /** Returns the event in the chatbot's display format. */
