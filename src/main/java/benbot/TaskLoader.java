@@ -16,6 +16,9 @@ public class TaskLoader {
     /** The contacts managed independently from the task list. */
     private final EntityList<Contact> contacts = new EntityList<>();
 
+    /** The notes managed independently from the task list. */
+    private final EntityList<Note> notes = new EntityList<>();
+
     /**
      * Creates a command processor with the specified maximum task capacity.
      *
@@ -79,12 +82,14 @@ public class TaskLoader {
 
     /** Returns commands that recreate all non-task entities managed by this processor. */
     List<String> getExtensionStorageCommands() {
-        return contacts.toStorageCommands();
+        List<String> commands = new ArrayList<>(contacts.toStorageCommands());
+        commands.addAll(notes.toStorageCommands());
+        return List.copyOf(commands);
     }
 
     /** Returns the total number of tasks and non-task entities currently managed. */
     int getStoredItemCount(int taskCount) {
-        return taskCount + contacts.size();
+        return taskCount + contacts.size() + notes.size();
     }
 
     /** Dispatches a valid, non-empty command to the operation that handles it. */
@@ -109,6 +114,9 @@ public class TaskLoader {
             case "contact" -> addContact(words, shouldPrint);
             case "contacts" -> listContacts(words, shouldPrint);
             case "delete-contact" -> deleteContact(words, shouldPrint);
+            case "note" -> addNote(words, shouldPrint);
+            case "notes" -> listNotes(words, shouldPrint);
+            case "delete-note" -> deleteNote(words, shouldPrint);
             default -> throw new InvalidCommandException("I don't know what that means.");
         }
         return false;
@@ -138,6 +146,32 @@ public class TaskLoader {
                 "Noted. I've removed this contact:",
                 "  " + removedContact,
                 "Now you have " + contacts.size() + " " + contactWord + ".");
+    }
+
+    private void addNote(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        Note note = Note.createFromCommand(words);
+        notes.add(note);
+        String noteWord = notes.size() == 1 ? "note" : "notes";
+        printMessage(shouldPrint,
+                "Got it. I've added this note:",
+                "  " + note,
+                "Now you have " + notes.size() + " " + noteWord + ".");
+    }
+
+    private void listNotes(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        requireNoArguments(words, "notes");
+        printMessage(shouldPrint, "Here are your notes:");
+        printMessage(shouldPrint, notes.toNumberedDisplayLines());
+    }
+
+    private void deleteNote(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        int noteIndex = getEntityIndex(words, notes.size(), "delete-note", "note");
+        Note removedNote = notes.remove(noteIndex);
+        String noteWord = notes.size() == 1 ? "note" : "notes";
+        printMessage(shouldPrint,
+                "Noted. I've removed this note:",
+                "  " + removedNote,
+                "Now you have " + notes.size() + " " + noteWord + ".");
     }
 
     private void sayGoodbye(String[] words, boolean shouldPrint) throws InvalidCommandException {

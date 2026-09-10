@@ -76,6 +76,25 @@ class TaskStorageTest {
     }
 
     @Test
+    void storeAndLoad_note_preservesNoteText() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        TaskLoader sourceLoader = new TaskLoader(1);
+        sourceLoader.addTask("note Watch Arrival", new Task[1], new int[] {0}, false);
+        new TaskDataStore(storedTaskPath).store(
+                new Task[1], 0, sourceLoader.getExtensionStorageCommands());
+
+        TaskLoader loadedLoader = new TaskLoader(1);
+        String loadOutput = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
+                .load(loadedLoader, new Task[1], new int[] {0}));
+        loadedLoader.addTask("notes", new Task[1], new int[] {0}, false);
+
+        assertEquals("note Watch Arrival" + System.lineSeparator(),
+                Files.readString(storedTaskPath));
+        assertTrue(loadOutput.contains("1 item already in storage."));
+        assertTrue(loadedLoader.getLastResponse().contains("1.[N] Watch Arrival"));
+    }
+
+    @Test
     void load_missingFile_reportsFreshStartWithoutChangingTasks() throws Exception {
         Path missingPath = temporaryDirectory.resolve("missing-task-file");
         Task[] tasks = new Task[1];

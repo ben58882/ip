@@ -182,4 +182,39 @@ class TaskLoaderTest {
 
         assertEquals("Here are your contacts:", loader.getLastResponse());
     }
+
+    @Test
+    void addTask_noteCommands_manageNotesSeparatelyFromTasks() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        loader.addTask("note Watch Arrival", tasks, taskCount, false);
+        loader.addTask("note Waist size is 82 cm", tasks, taskCount, false);
+        loader.addTask("notes", tasks, taskCount, false);
+
+        assertEquals(0, taskCount[0]);
+        assertTrue(loader.getLastResponse().contains("1.[N] Watch Arrival"));
+        assertTrue(loader.getLastResponse().contains("2.[N] Waist size is 82 cm"));
+
+        loader.addTask("delete-note 1", tasks, taskCount, false);
+        loader.addTask("notes", tasks, taskCount, false);
+
+        assertFalse(loader.getLastResponse().contains("Watch Arrival"));
+        assertTrue(loader.getLastResponse().contains("1.[N] Waist size is 82 cm"));
+    }
+
+    @Test
+    void addTask_invalidNoteCommands_leaveNotesUnchanged() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        loader.addTask("note", tasks, taskCount, false);
+        loader.addTask("delete-note one", tasks, taskCount, false);
+        loader.addTask("delete-note 1", tasks, taskCount, false);
+        loader.addTask("notes", tasks, taskCount, false);
+
+        assertEquals("Here are your notes:", loader.getLastResponse());
+    }
 }
