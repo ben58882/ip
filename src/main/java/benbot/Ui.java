@@ -5,6 +5,43 @@ import java.util.Scanner;
 
 /** Handles BenBot's command-line interaction with the user. */
 class Ui {
+    /** The greeting and command summary shared by the terminal and graphical interfaces. */
+    private static final String WELCOME_MESSAGE = String.join(System.lineSeparator(),
+            "Hello! I'm BenBot.",
+            "I can help you manage tasks, contacts, notes, and expenses.",
+            "",
+            "Tasks:",
+            "  todo DESCRIPTION",
+            "  deadline DESCRIPTION /by DATE [TIME]",
+            "  event DESCRIPTION /from START /to END",
+            "  list",
+            "  find KEYWORD",
+            "  mark TASK_NUMBER",
+            "  unmark TASK_NUMBER",
+            "  delete TASK_NUMBER",
+            "",
+            "Contacts:",
+            "  contact NAME /phone PHONE /email EMAIL",
+            "  contacts",
+            "  delete-contact CONTACT_NUMBER",
+            "",
+            "Notes:",
+            "  note TEXT",
+            "  notes",
+            "  delete-note NOTE_NUMBER",
+            "",
+            "Expenses (list includes the total):",
+            "  expense DESCRIPTION /amount AMOUNT",
+            "  expenses",
+            "  delete-expense EXPENSE_NUMBER",
+            "",
+            "Use lowercase commands and replace the uppercase placeholders.",
+            "Each list has its own numbers, starting at 1.",
+            "Dates: 15/9/2026; optional times: 1800 (24-hour HHmm).",
+            "START and END each accept a date with an optional time.",
+            "Amounts must be positive, such as 2.40, without a currency symbol.",
+            "Type bye to save all your data and exit.",
+            "What would you like to do?");
 
     /** Reads commands entered through the standard input stream. */
     private final Scanner scanner;
@@ -28,7 +65,7 @@ class Ui {
         this.taskDataStore = taskDataStore;
     }
 
-    /** Displays BenBot's welcome banner and initial prompt. */
+    /** Displays BenBot's welcome banner, available commands, and initial prompt. */
     public void welcome() {
         String banner = " ____              ____        _   \n"
                 + "| __ )  ___ _ __  | __ )  ___ | |_ \n"
@@ -37,9 +74,13 @@ class Ui {
                 + "|____/ \\___|_| |_||____/ \\___/ \\__|\n";
 
         System.out.println(banner);
-        System.out.println("Hello! I'm BenBot.");
-        System.out.println("What can I do for you?");
+        System.out.println(getWelcomeMessage());
         System.out.println(BenBot.DIVIDER);
+    }
+
+    /** Returns the greeting and command summary shared by BenBot's interfaces. */
+    static String getWelcomeMessage() {
+        return WELCOME_MESSAGE;
     }
 
     /**

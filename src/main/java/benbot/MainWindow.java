@@ -45,9 +45,7 @@ public class MainWindow {
      */
     public void setBenBot(BenBot benBot) {
         this.benBot = benBot;
-        dialogContainer.getChildren().add(DialogBox.getBotDialog(
-                "Hello! I'm BenBot. What can I do for you?\n"
-                        + "Try todo, deadline, event, list, find, mark, unmark, delete, or bye."));
+        dialogContainer.getChildren().add(DialogBox.getBotDialog(Ui.getWelcomeMessage()));
         Platform.runLater(userInput::requestFocus);
     }
 
