@@ -4,11 +4,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-/** Stores BenBot's tasks so that they can be reloaded in a later run. */
+/** Stores BenBot's tasks and non-task entities so that they can be reloaded later. */
 public class TaskDataStore {
     /** The location of the file containing task commands. */
     private static final Path DEFAULT_STORED_TASK_PATH = Path.of("data/stored-task");
@@ -39,9 +40,16 @@ public class TaskDataStore {
      * @throws IOException if the data file or its parent directory cannot be written.
      */
     public void store(Task[] tasks, int taskCount) throws IOException {
+        store(tasks, taskCount, List.of());
+    }
+
+    /** Writes tasks and extension entities as reloadable command lines. */
+    void store(Task[] tasks, int taskCount, List<String> extensionCommands) throws IOException {
         assert tasks != null : "A task array must be provided for storage";
         assert taskCount >= 0 && taskCount <= tasks.length
                 : "Only tasks within the array can be stored";
+        assert extensionCommands != null && extensionCommands.stream().noneMatch(command -> command == null)
+                : "Every extension storage command must be initialized";
 
         Path parentDirectory = storedTaskPath.getParent();
         if (parentDirectory != null) {
@@ -55,7 +63,8 @@ public class TaskDataStore {
         Stream<String> markCommands = IntStream.range(0, taskCount)
                 .filter(index -> tasks[index].isDone())
                 .mapToObj(index -> "mark " + (index + 1));
-        String storedData = Stream.concat(taskCommands, markCommands)
+        Stream<String> itemCommands = Stream.concat(taskCommands, extensionCommands.stream());
+        String storedData = Stream.concat(itemCommands, markCommands)
                 .map(command -> command + System.lineSeparator())
                 .collect(Collectors.joining());
 

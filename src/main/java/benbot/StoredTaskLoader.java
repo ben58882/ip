@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-/** Loads previously stored task commands from the application's data file. */
+/** Loads previously stored commands from the application's data file. */
 public class StoredTaskLoader {
     /** The location of the stored task commands, relative to the working directory. */
     private static final Path DEFAULT_STORED_TASK_PATH = Path.of("data/stored-task");
@@ -42,17 +42,17 @@ public class StoredTaskLoader {
         }
 
         try {
-            int loadedTaskCount = loadStoredTasks(taskLoader, tasks, taskCountPointer);
-            printLoadedTaskCount(loadedTaskCount);
+            int loadedItemCount = loadStoredItems(taskLoader, tasks, taskCountPointer);
+            printLoadedItemCount(loadedItemCount);
         } catch (IOException e) {
             System.out.println("ERROR: " + e.getMessage());
         }
     }
 
-    /** Reads and validates the stored commands, returning the number of tasks added. */
-    private int loadStoredTasks(TaskLoader taskLoader, Task[] tasks, int[] taskCountPointer)
+    /** Reads and validates the stored commands, returning the number of items added. */
+    private int loadStoredItems(TaskLoader taskLoader, Task[] tasks, int[] taskCountPointer)
             throws IOException {
-        int taskCountBeforeLoading = taskCountPointer[0];
+        int itemCountBeforeLoading = taskLoader.getStoredItemCount(taskCountPointer[0]);
         String storedData = Files.readString(storedTaskPath);
         String[] commands = storedData.split("\\R");
         for (int i = 0; i < commands.length; i++) {
@@ -61,31 +61,32 @@ public class StoredTaskLoader {
             }
             loadStoredCommand(commands[i], i + 1, taskLoader, tasks, taskCountPointer);
         }
-        return taskCountPointer[0] - taskCountBeforeLoading;
+        return taskLoader.getStoredItemCount(taskCountPointer[0]) - itemCountBeforeLoading;
     }
 
     /** Loads one command or reports its line as corrupted when it does not change valid state. */
     private void loadStoredCommand(String command, int lineNumber, TaskLoader taskLoader,
                                    Task[] tasks, int[] taskCountPointer) throws IOException {
         int taskCountBefore = taskCountPointer[0];
+        int itemCountBefore = taskLoader.getStoredItemCount(taskCountBefore);
         int markedTaskIndex = getMarkedTaskIndex(command, taskCountBefore);
         boolean wasMarkedTaskDone = markedTaskIndex >= 0 && tasks[markedTaskIndex].isDone();
 
         taskLoader.addTask(command, tasks, taskCountPointer, false);
 
-        boolean wasTaskAdded = taskCountPointer[0] == taskCountBefore + 1;
+        boolean wasItemAdded = taskLoader.getStoredItemCount(taskCountPointer[0]) == itemCountBefore + 1;
         boolean wasTaskMarked = markedTaskIndex >= 0
                 && !wasMarkedTaskDone && tasks[markedTaskIndex].isDone();
-        if (wasTaskAdded || wasTaskMarked) {
+        if (wasItemAdded || wasTaskMarked) {
             return;
         }
         throw new IOException("Stored-task file is corrupted at line " + lineNumber
-                + ". Each line must be a valid todo, deadline, event, or mark command.");
+                + ". Each line must be a valid todo, deadline, event, contact, note, expense, or mark command.");
     }
 
-    private void printLoadedTaskCount(int loadedTaskCount) {
-        String taskWord = loadedTaskCount == 1 ? "task" : "tasks";
-        System.out.println(loadedTaskCount + " " + taskWord + " already in storage.");
+    private void printLoadedItemCount(int loadedItemCount) {
+        String itemWord = loadedItemCount == 1 ? "item" : "items";
+        System.out.println(loadedItemCount + " " + itemWord + " already in storage.");
         System.out.println(BenBot.DIVIDER);
     }
 

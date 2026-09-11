@@ -5,10 +5,12 @@ import java.util.Scanner;
 
 /** Handles BenBot's command-line interaction with the user. */
 class Ui {
-    /** The greeting and command summary shown when BenBot starts. */
+    /** The greeting and command summary shared by the terminal and graphical interfaces. */
     private static final String WELCOME_MESSAGE = String.join(System.lineSeparator(),
             "Hello! I'm BenBot.",
-            "Here are the commands I understand:",
+            "I can help you manage tasks, contacts, notes, and expenses.",
+            "",
+            "Tasks:",
             "  todo DESCRIPTION",
             "  deadline DESCRIPTION /by DATE [TIME]",
             "  event DESCRIPTION /from START /to END",
@@ -17,8 +19,28 @@ class Ui {
             "  mark TASK_NUMBER",
             "  unmark TASK_NUMBER",
             "  delete TASK_NUMBER",
-            "  bye",
-            "Dates look like 15/9/2026; optional times use 24-hour HHmm, such as 1800.",
+            "",
+            "Contacts:",
+            "  contact NAME /phone PHONE /email EMAIL",
+            "  contacts",
+            "  delete-contact CONTACT_NUMBER",
+            "",
+            "Notes:",
+            "  note TEXT",
+            "  notes",
+            "  delete-note NOTE_NUMBER",
+            "",
+            "Expenses (list includes the total):",
+            "  expense DESCRIPTION /amount AMOUNT",
+            "  expenses",
+            "  delete-expense EXPENSE_NUMBER",
+            "",
+            "Use lowercase commands and replace the uppercase placeholders.",
+            "Each list has its own numbers, starting at 1.",
+            "Dates: 15/9/2026; optional times: 1800 (24-hour HHmm).",
+            "START and END each accept a date with an optional time.",
+            "Amounts must be positive, such as 2.40, without a currency symbol.",
+            "Type bye to save all your data and exit.",
             "What would you like to do?");
 
     /** Reads commands entered through the standard input stream. */
@@ -43,7 +65,7 @@ class Ui {
         this.taskDataStore = taskDataStore;
     }
 
-    /** Displays BenBot's welcome banner and initial prompt. */
+    /** Displays BenBot's welcome banner, available commands, and initial prompt. */
     public void welcome() {
         String banner = " ____              ____        _   \n"
                 + "| __ )  ___ _ __  | __ )  ___ | |_ \n"
@@ -52,7 +74,7 @@ class Ui {
                 + "|____/ \\___|_| |_||____/ \\___/ \\__|\n";
 
         System.out.println(banner);
-        System.out.println(WELCOME_MESSAGE);
+        System.out.println(getWelcomeMessage());
         System.out.println(BenBot.DIVIDER);
     }
 
@@ -73,7 +95,7 @@ class Ui {
             String line = scanner.nextLine().trim();
             System.out.println(BenBot.DIVIDER);
             if (taskLoader.addTask(line, tasks, taskCount, true)) {
-                String storageError = storeTasks(tasks, taskCount[0]);
+                String storageError = storeData(taskLoader, tasks, taskCount[0]);
                 if (!storageError.isEmpty()) {
                     System.out.println(storageError);
                 }
@@ -83,15 +105,15 @@ class Ui {
     }
 
     /**
-     * Stores the current tasks and returns an error message if storage fails.
+     * Stores the current tasks and extension entities and returns an error message if storage fails.
      * Returning the message lets both text and graphical interfaces display it appropriately.
      */
-    String storeTasks(Task[] tasks, int taskCount) {
+    String storeData(TaskLoader taskLoader, Task[] tasks, int taskCount) {
         try {
-            taskDataStore.store(tasks, taskCount);
+            taskDataStore.store(tasks, taskCount, taskLoader.getExtensionStorageCommands());
             return "";
         } catch (IOException e) {
-            return "ERROR: Unable to store tasks: " + e.getMessage();
+            return "ERROR: Unable to store data: " + e.getMessage();
         }
     }
 }

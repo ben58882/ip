@@ -13,6 +13,15 @@ public class TaskLoader {
     /** The response lines produced while processing the most recent command. */
     private final List<String> responseLines = new ArrayList<>();
 
+    /** The contacts managed independently from the task list. */
+    private final EntityList<Contact> contacts = new EntityList<>();
+
+    /** The notes managed independently from the task list. */
+    private final EntityList<Note> notes = new EntityList<>();
+
+    /** The expenses managed independently from the task list. */
+    private final ExpenseTracker expenseTracker = new ExpenseTracker();
+
     /**
      * Creates a command processor with the specified maximum task capacity.
      *
@@ -74,6 +83,19 @@ public class TaskLoader {
         return String.join(System.lineSeparator(), responseLines);
     }
 
+    /** Returns commands that recreate all non-task entities managed by this processor. */
+    List<String> getExtensionStorageCommands() {
+        List<String> commands = new ArrayList<>(contacts.toStorageCommands());
+        commands.addAll(notes.toStorageCommands());
+        commands.addAll(expenseTracker.toStorageCommands());
+        return List.copyOf(commands);
+    }
+
+    /** Returns the total number of tasks and non-task entities currently managed. */
+    int getStoredItemCount(int taskCount) {
+        return taskCount + contacts.size() + notes.size() + expenseTracker.size();
+    }
+
     /** Dispatches a valid, non-empty command to the operation that handles it. */
     private boolean executeCommand(String line, Task[] tasks, int[] taskCountPointer,
                                    boolean shouldPrint) throws BenBotException {
@@ -93,9 +115,98 @@ public class TaskLoader {
             case "mark" -> markTaskDone(words, tasks, taskCountPointer[0], shouldPrint);
             case "unmark" -> markTaskUndone(words, tasks, taskCountPointer[0], shouldPrint);
             case "find" -> findTasks(line, words, tasks, taskCountPointer[0], shouldPrint);
+            case "contact" -> addContact(words, shouldPrint);
+            case "contacts" -> listContacts(words, shouldPrint);
+            case "delete-contact" -> deleteContact(words, shouldPrint);
+            case "note" -> addNote(words, shouldPrint);
+            case "notes" -> listNotes(words, shouldPrint);
+            case "delete-note" -> deleteNote(words, shouldPrint);
+            case "expense" -> addExpense(words, shouldPrint);
+            case "expenses" -> listExpenses(words, shouldPrint);
+            case "delete-expense" -> deleteExpense(words, shouldPrint);
             default -> throw new InvalidCommandException("I don't know what that means.");
         }
         return false;
+    }
+
+    private void addContact(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        Contact contact = Contact.createFromCommand(words);
+        contacts.add(contact);
+        String contactWord = contacts.size() == 1 ? "contact" : "contacts";
+        printMessage(shouldPrint,
+                "Got it. I've added this contact:",
+                "  " + contact,
+                "Now you have " + contacts.size() + " " + contactWord + ".");
+    }
+
+    private void listContacts(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        requireNoArguments(words, "contacts");
+        printMessage(shouldPrint, "Here are your contacts:");
+        printMessage(shouldPrint, contacts.toNumberedDisplayLines());
+    }
+
+    private void deleteContact(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        int contactIndex = getEntityIndex(words, contacts.size(), "delete-contact", "contact");
+        Contact removedContact = contacts.remove(contactIndex);
+        String contactWord = contacts.size() == 1 ? "contact" : "contacts";
+        printMessage(shouldPrint,
+                "Noted. I've removed this contact:",
+                "  " + removedContact,
+                "Now you have " + contacts.size() + " " + contactWord + ".");
+    }
+
+    private void addNote(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        Note note = Note.createFromCommand(words);
+        notes.add(note);
+        String noteWord = notes.size() == 1 ? "note" : "notes";
+        printMessage(shouldPrint,
+                "Got it. I've added this note:",
+                "  " + note,
+                "Now you have " + notes.size() + " " + noteWord + ".");
+    }
+
+    private void listNotes(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        requireNoArguments(words, "notes");
+        printMessage(shouldPrint, "Here are your notes:");
+        printMessage(shouldPrint, notes.toNumberedDisplayLines());
+    }
+
+    private void deleteNote(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        int noteIndex = getEntityIndex(words, notes.size(), "delete-note", "note");
+        Note removedNote = notes.remove(noteIndex);
+        String noteWord = notes.size() == 1 ? "note" : "notes";
+        printMessage(shouldPrint,
+                "Noted. I've removed this note:",
+                "  " + removedNote,
+                "Now you have " + notes.size() + " " + noteWord + ".");
+    }
+
+    private void addExpense(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        Expense expense = Expense.createFromCommand(words);
+        expenseTracker.add(expense);
+        String expenseWord = expenseTracker.size() == 1 ? "expense" : "expenses";
+        printMessage(shouldPrint,
+                "Got it. I've added this expense:",
+                "  " + expense,
+                "Now you have " + expenseTracker.size() + " " + expenseWord + ".");
+    }
+
+    private void listExpenses(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        requireNoArguments(words, "expenses");
+        printMessage(shouldPrint, "Here are your expenses:");
+        printMessage(shouldPrint, expenseTracker.toNumberedDisplayLines());
+        printMessage(shouldPrint, "Total expenses: $" + expenseTracker.getTotalAmount().toPlainString());
+    }
+
+    private void deleteExpense(String[] words, boolean shouldPrint) throws InvalidCommandException {
+        int expenseIndex = getEntityIndex(
+                words, expenseTracker.size(), "delete-expense", "expense");
+        Expense removedExpense = expenseTracker.remove(expenseIndex);
+        String expenseWord = expenseTracker.size() == 1 ? "expense" : "expenses";
+        printMessage(shouldPrint,
+                "Noted. I've removed this expense:",
+                "  " + removedExpense,
+                "Now you have " + expenseTracker.size() + " " + expenseWord + ".");
     }
 
     private void sayGoodbye(String[] words, boolean shouldPrint) throws InvalidCommandException {
@@ -290,6 +401,26 @@ public class TaskLoader {
             return taskNumber - 1;
         } catch (NumberFormatException e) {
             throw new InvalidTaskNumberException("The task number must be a whole number.");
+        }
+    }
+
+    /** Converts and validates a one-based number for a non-task entity. */
+    private int getEntityIndex(String[] words, int entityCount, String command, String entityName)
+            throws InvalidCommandException {
+        if (words.length != 2) {
+            throw new InvalidCommandException(
+                    "Use: " + command + " " + entityName.toUpperCase(Locale.ROOT) + "_NUMBER");
+        }
+
+        try {
+            int entityNumber = Integer.parseInt(words[1]);
+            if (entityNumber < 1 || entityNumber > entityCount) {
+                throw new InvalidCommandException("That " + entityName + " number does not exist.");
+            }
+            return entityNumber - 1;
+        } catch (NumberFormatException e) {
+            throw new InvalidCommandException(
+                    "The " + entityName + " number must be a whole number.");
         }
     }
 

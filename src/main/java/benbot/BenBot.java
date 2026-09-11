@@ -90,7 +90,7 @@ public class BenBot {
      * @return an empty string on success, or a user-facing error message on failure.
      */
     public String save() {
-        return ui.storeTasks(tasks, taskCount[0]);
+        return ui.storeData(taskLoader, tasks, taskCount[0]);
     }
 
     /**
