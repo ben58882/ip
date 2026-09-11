@@ -5,6 +5,21 @@ import java.util.Scanner;
 
 /** Handles BenBot's command-line interaction with the user. */
 class Ui {
+    /** The greeting and command summary shown when BenBot starts. */
+    private static final String WELCOME_MESSAGE = String.join(System.lineSeparator(),
+            "Hello! I'm BenBot.",
+            "Here are the commands I understand:",
+            "  todo DESCRIPTION",
+            "  deadline DESCRIPTION /by DATE [TIME]",
+            "  event DESCRIPTION /from START /to END",
+            "  list",
+            "  find KEYWORD",
+            "  mark TASK_NUMBER",
+            "  unmark TASK_NUMBER",
+            "  delete TASK_NUMBER",
+            "  bye",
+            "Dates look like 15/9/2026; optional times use 24-hour HHmm, such as 1800.",
+            "What would you like to do?");
 
     /** Reads commands entered through the standard input stream. */
     private final Scanner scanner;
@@ -37,9 +52,13 @@ class Ui {
                 + "|____/ \\___|_| |_||____/ \\___/ \\__|\n";
 
         System.out.println(banner);
-        System.out.println("Hello! I'm BenBot.");
-        System.out.println("What can I do for you?");
+        System.out.println(WELCOME_MESSAGE);
         System.out.println(BenBot.DIVIDER);
+    }
+
+    /** Returns the greeting and command summary shared by BenBot's interfaces. */
+    static String getWelcomeMessage() {
+        return WELCOME_MESSAGE;
     }
 
     /**

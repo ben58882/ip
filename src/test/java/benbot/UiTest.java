@@ -26,6 +26,30 @@ class UiTest {
     }
 
     @Test
+    void welcome_displaysEveryAvailableCommand() throws Exception {
+        Ui ui = new Ui(new Scanner(""), new TaskDataStore(temporaryDirectory.resolve("tasks")));
+        String[] commands = {
+            "todo DESCRIPTION",
+            "deadline DESCRIPTION /by DATE [TIME]",
+            "event DESCRIPTION /from START /to END",
+            "list",
+            "find KEYWORD",
+            "mark TASK_NUMBER",
+            "unmark TASK_NUMBER",
+            "delete TASK_NUMBER",
+            "bye"
+        };
+
+        String output = OutputCapture.capture(ui::welcome);
+
+        for (String command : commands) {
+            assertTrue(output.contains(command));
+        }
+        assertTrue(output.contains("15/9/2026"));
+        assertTrue(output.contains("1800"));
+    }
+
+    @Test
     void run_byeCommand_storesTasksBeforeExiting() throws Exception {
         Path storedTaskPath = temporaryDirectory.resolve("stored-task");
         Ui ui = new Ui(new Scanner("todo read book\nbye\n"), new TaskDataStore(storedTaskPath));
