@@ -7,6 +7,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
+import javafx.stage.WindowEvent;
 import javafx.util.Duration;
 
 /** Controls the main BenBot conversation window defined in FXML. */
@@ -46,6 +47,31 @@ public class MainWindow {
     public void setBenBot(BenBot benBot) {
         this.benBot = benBot;
         dialogContainer.getChildren().add(DialogBox.getBotDialog(Ui.getWelcomeMessage()));
+        String loadFailureMessage = benBot.getLoadFailureMessage();
+        if (!loadFailureMessage.isEmpty()) {
+            dialogContainer.getChildren().add(DialogBox.getBotDialog(loadFailureMessage));
+        }
+        Platform.runLater(userInput::requestFocus);
+    }
+
+    /**
+     * Saves data before a manual window close and keeps the window open if saving fails.
+     * A successful {@code bye} command has already saved the data, so it can close immediately.
+     *
+     * @param event the window-close request that can be canceled when saving fails.
+     */
+    void handleCloseRequest(WindowEvent event) {
+        if (benBot == null || benBot.isExitRequested()) {
+            return;
+        }
+
+        String storageError = benBot.save();
+        if (storageError.isEmpty()) {
+            return;
+        }
+
+        event.consume();
+        dialogContainer.getChildren().add(DialogBox.getBotDialog(storageError));
         Platform.runLater(userInput::requestFocus);
     }
 

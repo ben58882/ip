@@ -24,4 +24,15 @@ class CommandWordsTest {
     void findMarker_emptyWords_returnsZero() {
         assertEquals(0, CommandWords.findMarker(new String[0], "/by"));
     }
+
+    @Test
+    void countMarker_repeatedMarker_returnsOccurrenceCount() {
+        String[] words = {
+            "event", "meeting", "/from", "1/1/2029", "/from", "2/1/2029", "/to", "3/1/2029"
+        };
+
+        assertEquals(2, CommandWords.countMarker(words, "/from"));
+        assertEquals(1, CommandWords.countMarker(words, "/to"));
+        assertEquals(0, CommandWords.countMarker(words, "/by"));
+    }
 }

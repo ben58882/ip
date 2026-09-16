@@ -1,6 +1,7 @@
 package benbot;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.stream.IntStream;
@@ -32,6 +33,11 @@ public class TaskLoader {
         this.maxTasks = maxTasks;
     }
 
+    /** Returns the maximum number of tasks this processor can store. */
+    int getMaxTasks() {
+        return maxTasks;
+    }
+
     /**
      * Processes one command and optionally prints BenBot's response.
      *
@@ -54,13 +60,14 @@ public class TaskLoader {
         assert hasPopulatedTaskPrefix(tasks, taskCount)
                 : "Every task before the task count must be initialized";
 
+        String strippedLine = line.strip();
         responseLines.clear();
         boolean shouldExit = false;
         try {
-            if (line.isEmpty()) {
+            if (strippedLine.isEmpty()) {
                 throw new InvalidCommandException("Please enter a command.");
             }
-            shouldExit = executeCommand(line, tasks, taskCountPointer, shouldPrint);
+            shouldExit = executeCommand(strippedLine, tasks, taskCountPointer, shouldPrint);
         } catch (BenBotException e) {
             printMessage(shouldPrint, e.getMessage());
         }
@@ -114,7 +121,7 @@ public class TaskLoader {
             case "delete" -> deleteTask(words, tasks, taskCountPointer, shouldPrint);
             case "mark" -> markTaskDone(words, tasks, taskCountPointer[0], shouldPrint);
             case "unmark" -> markTaskUndone(words, tasks, taskCountPointer[0], shouldPrint);
-            case "find" -> findTasks(line, words, tasks, taskCountPointer[0], shouldPrint);
+            case "find" -> findTasks(words, tasks, taskCountPointer[0], shouldPrint);
             case "contact" -> addContact(words, shouldPrint);
             case "contacts" -> listContacts(words, shouldPrint);
             case "delete-contact" -> deleteContact(words, shouldPrint);
@@ -244,12 +251,25 @@ public class TaskLoader {
         appendTask(new Event(words), tasks, taskCountPointer, shouldPrint);
     }
 
-    private void appendTask(Task task, Task[] tasks, int[] taskCountPointer, boolean shouldPrint) {
+    private void appendTask(Task task, Task[] tasks, int[] taskCountPointer, boolean shouldPrint)
+            throws InvalidCommandException {
         int taskCount = taskCountPointer[0];
+        ensureTaskIsUnique(task, tasks, taskCount);
         tasks[taskCount] = task;
         taskCount++;
         taskCountPointer[0] = taskCount;
         printTaskAdded(task, taskCount, shouldPrint);
+    }
+
+    /** Ensures that an equivalent task is not already present in the task list. */
+    private void ensureTaskIsUnique(Task newTask, Task[] tasks, int taskCount)
+            throws InvalidCommandException {
+        String newTaskStorageCommand = newTask.toStorageString();
+        for (int i = 0; i < taskCount; i++) {
+            if (tasks[i].toStorageString().equals(newTaskStorageCommand)) {
+                throw new InvalidCommandException("That task is already in your list.");
+            }
+        }
     }
 
     private void deleteTask(String[] words, Task[] tasks, int[] taskCountPointer,
@@ -276,10 +296,10 @@ public class TaskLoader {
         printMessage(shouldPrint, "OK, I've marked this task as not done yet:", "  " + task);
     }
 
-    private void findTasks(String line, String[] words, Task[] tasks, int taskCount,
+    private void findTasks(String[] words, Task[] tasks, int taskCount,
                            boolean shouldPrint) throws InvalidCommandException {
         requireDescription(words, "find KEYWORD");
-        String keyword = line.substring(words[0].length()).trim();
+        String keyword = String.join(" ", Arrays.copyOfRange(words, 1, words.length));
         printMatchingTasks(keyword, tasks, taskCount, shouldPrint);
     }
 
@@ -365,7 +385,8 @@ public class TaskLoader {
     /** Validates the required description and {@code /by} parts of a deadline. */
     private void validateDeadline(String[] words) throws InvalidCommandException {
         int byIndex = CommandWords.findMarker(words, "/by");
-        if (byIndex <= 1 || byIndex >= words.length - 1) {
+        boolean isMarkerCountInvalid = CommandWords.countMarker(words, "/by") != 1;
+        if (isMarkerCountInvalid || byIndex <= 1 || byIndex >= words.length - 1) {
             throw new InvalidCommandException("Use: deadline DESCRIPTION /by DATE");
         }
     }
@@ -374,13 +395,15 @@ public class TaskLoader {
     private void validateEvent(String[] words) throws InvalidCommandException {
         int fromIndex = CommandWords.findMarker(words, "/from");
         int toIndex = CommandWords.findMarker(words, "/to");
+        boolean isMarkerCountInvalid = CommandWords.countMarker(words, "/from") != 1
+                || CommandWords.countMarker(words, "/to") != 1;
         boolean isFromMarkerMissing = fromIndex == words.length;
         boolean isToMarkerMissing = toIndex == words.length;
         boolean isDescriptionMissing = fromIndex <= 1;
         boolean areMarkersOutOfOrder = toIndex < fromIndex;
         boolean isStartMissing = toIndex == fromIndex + 1;
         boolean isEndMissing = toIndex == words.length - 1;
-        if (isFromMarkerMissing || isToMarkerMissing || isDescriptionMissing
+        if (isMarkerCountInvalid || isFromMarkerMissing || isToMarkerMissing || isDescriptionMissing
                 || areMarkersOutOfOrder || isStartMissing || isEndMissing) {
             throw new InvalidCommandException("Use: event DESCRIPTION /from START /to END");
         }
@@ -394,6 +417,9 @@ public class TaskLoader {
         }
 
         try {
+            if (!words[1].chars().allMatch(Character::isDigit)) {
+                throw new NumberFormatException();
+            }
             int taskNumber = Integer.parseInt(words[1]);
             if (taskNumber < 1 || taskNumber > taskCount) {
                 throw new InvalidTaskNumberException("That task number does not exist.");
@@ -413,6 +439,9 @@ public class TaskLoader {
         }
 
         try {
+            if (!words[1].chars().allMatch(Character::isDigit)) {
+                throw new NumberFormatException();
+            }
             int entityNumber = Integer.parseInt(words[1]);
             if (entityNumber < 1 || entityNumber > entityCount) {
                 throw new InvalidCommandException("That " + entityName + " number does not exist.");

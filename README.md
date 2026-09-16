@@ -38,7 +38,8 @@ and press Enter or select **Send**.
 
 Use lowercase command words and replace uppercase placeholders with your own
 values. Square brackets indicate optional input; do not type the brackets.
-Enter one command per line.
+Enter one command per line. Leading, trailing, and repeated whitespace is
+normalized before a command is processed.
 
 ### Tasks
 
@@ -55,10 +56,11 @@ Enter one command per line.
 
 Dates use `day/month/year`, such as `15/9/2026`. Optional times use the 24-hour
 `HHmm` format, such as `1800`. Each event boundary (`START` and `END`) accepts a
-date with an optional time; the end must not precede the start.
+date with an optional time; the end must be after the start.
 
 BenBot stores up to 100 tasks. `find` matches text anywhere in a task description
 and keeps the original task numbers in its results. It searches tasks only.
+BenBot rejects an exact duplicate of a task already in the list.
 
 ### Contacts
 
@@ -115,9 +117,10 @@ expenses
 delete-expense 1
 ```
 
-Use a positive amount such as `2.40`, without a currency symbol. Amounts must be
-representable exactly with two decimal places; BenBot does not round fractional
-cents. Expense displays and totals use `$`, with no currency conversion.
+Use a positive decimal amount such as `2`, `2.4`, or `2.40`, without a currency
+symbol, sign, grouping separator, or scientific notation. Amounts may have at
+most two decimal places; BenBot does not round fractional cents. Expense
+displays and totals use `$`, with no currency conversion.
 
 ### Numbers and saving
 
@@ -126,11 +129,17 @@ Each list starts at 1. Use the number shown by `list`, `contacts`, `notes`, or
 entries in that list. Task completion commands apply only to tasks.
 
 Use `bye` to save all data and exit. Closing the JavaFX window also saves the
-data. Changes are saved at exit, rather than after each command.
+data. Changes are saved at exit, rather than after each command. If an exit save
+fails, BenBot reports the problem and remains open so the storage location can
+be fixed and the save retried.
 
 All lists are stored in `data/stored-task` relative to the directory from which
 BenBot is launched. Start BenBot from the same directory to reload the same
-data. Task completion status is preserved too.
+data. Task completion status is preserved too. BenBot validates the complete
+stored file before loading it, so a corrupted line does not partially change
+the live data. It will not overwrite a file that failed to load; fix that file
+and restart BenBot. Saves replace the previous file only after a complete
+temporary file has been written.
 
 ## Set up IntelliJ IDEA
 

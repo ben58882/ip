@@ -1,9 +1,10 @@
 package benbot;
 
 import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -51,11 +52,6 @@ public class TaskDataStore {
         assert extensionCommands != null && extensionCommands.stream().noneMatch(command -> command == null)
                 : "Every extension storage command must be initialized";
 
-        Path parentDirectory = storedTaskPath.getParent();
-        if (parentDirectory != null) {
-            Files.createDirectories(parentDirectory);
-        }
-
         assert IntStream.range(0, taskCount).allMatch(index -> tasks[index] != null)
                 : "Every task selected for storage must be initialized";
         Stream<String> taskCommands = IntStream.range(0, taskCount)
@@ -68,7 +64,34 @@ public class TaskDataStore {
                 .map(command -> command + System.lineSeparator())
                 .collect(Collectors.joining());
 
-        Files.writeString(storedTaskPath, storedData,
-                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        replaceStoredData(storedData);
+    }
+
+    /** Writes to a temporary file before replacing the last complete stored-data file. */
+    private void replaceStoredData(String storedData) throws IOException {
+        Path absoluteStoredTaskPath = storedTaskPath.toAbsolutePath();
+        Path parentDirectory = absoluteStoredTaskPath.getParent();
+        if (parentDirectory == null) {
+            throw new IOException("The stored-data path must name a file.");
+        }
+        Files.createDirectories(parentDirectory);
+
+        Path temporaryPath = Files.createTempFile(parentDirectory, "benbot-storage-", ".tmp");
+        try {
+            Files.writeString(temporaryPath, storedData);
+            moveIntoPlace(temporaryPath, absoluteStoredTaskPath);
+        } finally {
+            Files.deleteIfExists(temporaryPath);
+        }
+    }
+
+    /** Replaces the data file atomically, falling back when the file system cannot do so. */
+    private void moveIntoPlace(Path temporaryPath, Path targetPath) throws IOException {
+        try {
+            Files.move(temporaryPath, targetPath,
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(temporaryPath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 }
