@@ -31,6 +31,21 @@ class TaskTest {
     }
 
     @Test
+    void markDoneAndUndone_repeatedCalls_areIdempotent() {
+        Task task = new Task("read book");
+
+        task.markDone();
+        task.markDone();
+        assertTrue(task.isDone());
+        assertEquals("[T][X] read book", task.toString());
+
+        task.markUndone();
+        task.markUndone();
+        assertFalse(task.isDone());
+        assertEquals("[T][ ] read book", task.toString());
+    }
+
+    @Test
     void taskTypes_returnExpectedListSymbols() {
         assertEquals("[T]", TaskType.TODO.getSymbol());
         assertEquals("[D]", TaskType.DEADLINE.getSymbol());
@@ -54,5 +69,15 @@ class TaskTest {
     @Test
     void task_blankDescription_throwsAssertionError() {
         assertThrows(AssertionError.class, () -> new Task(" "));
+    }
+
+    @Test
+    void task_nullDescription_throwsAssertionError() {
+        assertThrows(AssertionError.class, () -> new Task(null));
+    }
+
+    @Test
+    void task_nullType_throwsAssertionError() {
+        assertThrows(AssertionError.class, () -> new Task("read book", null));
     }
 }

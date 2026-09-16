@@ -1,6 +1,7 @@
 package benbot;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -14,6 +15,16 @@ import org.junit.jupiter.api.io.TempDir;
 class BenBotTest {
     @TempDir
     Path temporaryDirectory;
+
+    @Test
+    void constructor_defaultComponents_processesCommand() {
+        BenBot benBot = new BenBot();
+
+        String response = benBot.getResponse("todo read book");
+
+        assertTrue(response.contains("I've added this task"));
+        assertFalse(benBot.isExitRequested());
+    }
 
     @Test
     void load_delegatesToStoredTaskLoader() throws Exception {
@@ -64,5 +75,51 @@ class BenBotTest {
         assertTrue(exitResponse.contains("Hope to see you again soon"));
         assertTrue(benBot.isExitRequested());
         assertEquals("todo read book" + System.lineSeparator(), Files.readString(storedTaskPath));
+    }
+
+    @Test
+    void getResponse_surroundingWhitespace_trimsCommand() {
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+        BenBot benBot = new BenBot(tasks, taskCount, new TaskLoader(1),
+                new StoredTaskLoader(temporaryDirectory.resolve("input")),
+                new Ui(new Scanner(""),
+                        new TaskDataStore(temporaryDirectory.resolve("stored-task"))));
+
+        String response = benBot.getResponse("  todo read book  ");
+
+        assertTrue(response.contains("I've added this task"));
+        assertEquals(1, taskCount[0]);
+        assertEquals("todo read book", tasks[0].toStorageString());
+        assertFalse(benBot.isExitRequested());
+    }
+
+    @Test
+    void save_storageFailure_returnsHelpfulError() throws Exception {
+        Path parentFile = temporaryDirectory.resolve("parent-file");
+        Files.writeString(parentFile, "not a directory");
+        BenBot benBot = new BenBot(new Task[1], new int[] {0}, new TaskLoader(1),
+                new StoredTaskLoader(temporaryDirectory.resolve("input")),
+                new Ui(new Scanner(""), new TaskDataStore(parentFile.resolve("stored-task"))));
+
+        String response = benBot.save();
+
+        assertTrue(response.startsWith("ERROR: Unable to store data:"));
+    }
+
+    @Test
+    void getResponse_byeWithStorageFailure_appendsError() throws Exception {
+        Path parentFile = temporaryDirectory.resolve("parent-file");
+        Files.writeString(parentFile, "not a directory");
+        BenBot benBot = new BenBot(new Task[1], new int[] {0}, new TaskLoader(1),
+                new StoredTaskLoader(temporaryDirectory.resolve("input")),
+                new Ui(new Scanner(""), new TaskDataStore(parentFile.resolve("stored-task"))));
+
+        String response = benBot.getResponse("bye");
+
+        assertTrue(response.startsWith("Bye. Hope to see you again soon!"));
+        assertTrue(response.contains(System.lineSeparator()
+                + "ERROR: Unable to store data:"));
+        assertTrue(benBot.isExitRequested());
     }
 }

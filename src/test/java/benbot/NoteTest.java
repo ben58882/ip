@@ -22,4 +22,10 @@ class NoteTest {
 
         assertEquals("Use: " + Note.USAGE, exception.getMessage());
     }
+
+    @Test
+    void note_nullOrBlankText_throwsAssertionError() {
+        assertThrows(AssertionError.class, () -> new Note(null));
+        assertThrows(AssertionError.class, () -> new Note(" "));
+    }
 }

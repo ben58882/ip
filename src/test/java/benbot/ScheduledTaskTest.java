@@ -5,7 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
-/** Tests scheduled deadline and event task behaviour. */
+/** Tests scheduled deadline and event task behavior. */
 class ScheduledTaskTest {
     @Test
     void deadline_dateAndTime_formatsForDisplayAndStorage() throws InvalidCommandException {
@@ -40,6 +40,23 @@ class ScheduledTaskTest {
                 event.toString());
         assertEquals("event study /from 2/12/2019 1800 /to 2/12/2019 2000",
                 event.toStorageString());
+    }
+
+    @Test
+    void event_mixedDateAndTime_formatsEachEndpoint() throws InvalidCommandException {
+        Event dateToTimeEvent = new Event(
+                "event", "conference", "/from", "1/12/2029", "/to", "2/12/2029", "1800");
+        Event timeToDateEvent = new Event(
+                "event", "holiday", "/from", "1/12/2029", "1800", "/to", "2/12/2029");
+
+        assertEquals("[E][ ] conference (from: Dec 01 2029 to: Dec 02 2029 6:00 pm)",
+                dateToTimeEvent.toString());
+        assertEquals("event conference /from 1/12/2029 /to 2/12/2029 1800",
+                dateToTimeEvent.toStorageString());
+        assertEquals("[E][ ] holiday (from: Dec 01 2029 6:00 pm to: Dec 02 2029)",
+                timeToDateEvent.toString());
+        assertEquals("event holiday /from 1/12/2029 1800 /to 2/12/2029",
+                timeToDateEvent.toStorageString());
     }
 
     @Test
