@@ -6,10 +6,18 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 /** Tests the command processor's task-list operations and responses. */
 class TaskLoaderTest {
+    @Test
+    void constructor_nonPositiveCapacity_throwsAssertionError() {
+        assertThrows(AssertionError.class, () -> new TaskLoader(0));
+        assertThrows(AssertionError.class, () -> new TaskLoader(-1));
+    }
+
     @Test
     void addTask_todoDeadlineAndEvent_addsEachTask() {
         TaskLoader loader = new TaskLoader(3);
@@ -84,6 +92,35 @@ class TaskLoaderTest {
     }
 
     @Test
+    void addTask_blankCommand_reportsErrorAndLeavesTasksUnchanged() throws Exception {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        String output = OutputCapture.capture(() ->
+                loader.addTask("", tasks, taskCount, true));
+
+        assertEquals("Please enter a command." + System.lineSeparator(), output);
+        assertEquals("Please enter a command.", loader.getLastResponse());
+        assertEquals(0, taskCount[0]);
+        assertNull(tasks[0]);
+    }
+
+    @Test
+    void addTask_outputDisabled_recordsResponseWithoutPrinting() throws Exception {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        String output = OutputCapture.capture(() ->
+                loader.addTask("todo read book", tasks, taskCount, false));
+
+        assertEquals("", output);
+        assertTrue(loader.getLastResponse().contains("I've added this task"));
+        assertEquals(1, taskCount[0]);
+    }
+
+    @Test
     void addTask_invalidTaskNumberAndFullList_leaveTasksUnchanged() throws Exception {
         TaskLoader loader = new TaskLoader(1);
         Task[] tasks = {new Task("read book")};
@@ -98,6 +135,91 @@ class TaskLoaderTest {
         assertTrue(fullListOutput.contains("Sorry, the task list is full."));
         assertEquals(1, taskCount[0]);
         assertEquals("todo read book", tasks[0].toStorageString());
+    }
+
+    @Test
+    void addTask_malformedTaskNumbers_reportSpecificErrorsAndLeaveTasksUnchanged() {
+        TaskLoader loader = new TaskLoader(2);
+        Task[] tasks = {new Task("read book"), null};
+        int[] taskCount = {1};
+
+        loader.addTask("mark", tasks, taskCount, false);
+        assertEquals("Use: mark TASK_NUMBER", loader.getLastResponse());
+
+        loader.addTask("unmark one", tasks, taskCount, false);
+        assertEquals("The task number must be a whole number.", loader.getLastResponse());
+
+        loader.addTask("delete 0", tasks, taskCount, false);
+        assertEquals("That task number does not exist.", loader.getLastResponse());
+
+        loader.addTask("delete 1 extra", tasks, taskCount, false);
+        assertEquals("Use: delete TASK_NUMBER", loader.getLastResponse());
+
+        assertEquals(1, taskCount[0]);
+        assertEquals("todo read book", tasks[0].toStorageString());
+        assertFalse(tasks[0].isDone());
+    }
+
+    @Test
+    void addTask_missingDescription_reportsUsageAndLeavesTasksUnchanged() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        loader.addTask("todo", tasks, taskCount, false);
+        assertEquals("Use: todo DESCRIPTION", loader.getLastResponse());
+
+        loader.addTask("find", tasks, taskCount, false);
+        assertEquals("Use: find KEYWORD", loader.getLastResponse());
+
+        assertEquals(0, taskCount[0]);
+        assertNull(tasks[0]);
+    }
+
+    @Test
+    void addTask_invalidDeadlineStructure_reportsUsageAndLeavesTasksUnchanged() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+        String[] invalidCommands = {
+            "deadline /by 1/12/2029",
+            "deadline return book 1/12/2029",
+            "deadline return book /by"
+        };
+
+        for (String command : invalidCommands) {
+            loader.addTask(command, tasks, taskCount, false);
+            assertEquals("Use: deadline DESCRIPTION /by DATE", loader.getLastResponse());
+        }
+        assertEquals(0, taskCount[0]);
+        assertNull(tasks[0]);
+    }
+
+    @Test
+    void addTask_noMatchingTasks_returnsOnlyHeadingAndLeavesTasksUnchanged() {
+        TaskLoader loader = new TaskLoader(2);
+        Task[] tasks = {new Task("read book"), null};
+        int[] taskCount = {1};
+
+        loader.addTask("find holiday", tasks, taskCount, false);
+
+        assertEquals("Here are the matching tasks in your list:", loader.getLastResponse());
+        assertEquals(1, taskCount[0]);
+        assertEquals("todo read book", tasks[0].toStorageString());
+    }
+
+    @Test
+    void addTask_deleteLastTask_removesTaskWithoutShiftingPastArrayEnd() {
+        TaskLoader loader = new TaskLoader(2);
+        Task[] tasks = {new Task("read book"), new Task("buy pen")};
+        int[] taskCount = {2};
+
+        loader.addTask("delete 2", tasks, taskCount, false);
+
+        assertEquals(1, taskCount[0]);
+        assertEquals("todo read book", tasks[0].toStorageString());
+        assertNull(tasks[1]);
+        assertTrue(loader.getLastResponse().contains("Now you have 1 task in the list."));
     }
 
     @Test
@@ -135,6 +257,28 @@ class TaskLoaderTest {
 
         assertThrows(AssertionError.class, () ->
                 loader.addTask("list", new Task[1], new int[] {2}, false));
+    }
+
+    @Test
+    void addTask_invalidInternalState_throwsAssertionError() {
+        TaskLoader loader = new TaskLoader(2);
+        Task[] validTasks = new Task[2];
+        int[] validTaskCount = {0};
+
+        assertThrows(AssertionError.class, () ->
+                loader.addTask(null, validTasks, validTaskCount, false));
+        assertThrows(AssertionError.class, () ->
+                loader.addTask("list", null, validTaskCount, false));
+        assertThrows(AssertionError.class, () ->
+                loader.addTask("list", new Task[1], validTaskCount, false));
+        assertThrows(AssertionError.class, () ->
+                loader.addTask("list", validTasks, null, false));
+        assertThrows(AssertionError.class, () ->
+                loader.addTask("list", validTasks, new int[0], false));
+        assertThrows(AssertionError.class, () ->
+                loader.addTask("list", validTasks, new int[] {-1}, false));
+        assertThrows(AssertionError.class, () ->
+                loader.addTask("list", validTasks, new int[] {1}, false));
     }
 
     @Test
@@ -254,5 +398,63 @@ class TaskLoaderTest {
 
         assertEquals("Here are your expenses:" + System.lineSeparator()
                 + "Total expenses: $0.00", loader.getLastResponse());
+    }
+
+    @Test
+    void addTask_deleteFinalEntities_usesPluralZeroCounts() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+        loader.addTask("contact Alice /phone 91234567 /email alice@example.com",
+                tasks, taskCount, false);
+        loader.addTask("note Watch Arrival", tasks, taskCount, false);
+        loader.addTask("expense lunch /amount 5.00", tasks, taskCount, false);
+
+        loader.addTask("delete-contact 1", tasks, taskCount, false);
+        assertTrue(loader.getLastResponse().endsWith("Now you have 0 contacts."));
+        loader.addTask("delete-note 1", tasks, taskCount, false);
+        assertTrue(loader.getLastResponse().endsWith("Now you have 0 notes."));
+        loader.addTask("delete-expense 1", tasks, taskCount, false);
+        assertTrue(loader.getLastResponse().endsWith("Now you have 0 expenses."));
+    }
+
+    @Test
+    void addTask_malformedEntityNumbers_reportSpecificErrorsAndLeaveEntitiesUnchanged() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+        loader.addTask("contact Alice /phone 91234567 /email alice@example.com",
+                tasks, taskCount, false);
+        loader.addTask("note Watch Arrival", tasks, taskCount, false);
+        loader.addTask("expense lunch /amount 5.00", tasks, taskCount, false);
+
+        loader.addTask("delete-contact", tasks, taskCount, false);
+        assertEquals("Use: delete-contact CONTACT_NUMBER", loader.getLastResponse());
+        loader.addTask("delete-note 1 extra", tasks, taskCount, false);
+        assertEquals("Use: delete-note NOTE_NUMBER", loader.getLastResponse());
+        loader.addTask("delete-expense one", tasks, taskCount, false);
+        assertEquals("The expense number must be a whole number.", loader.getLastResponse());
+
+        assertEquals(3, loader.getStoredItemCount(0));
+    }
+
+    @Test
+    void getExtensionStorageCommands_mixedEntities_returnsGroupedImmutableCommands() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+        loader.addTask("expense lunch /amount 5", tasks, taskCount, false);
+        loader.addTask("note Watch Arrival", tasks, taskCount, false);
+        loader.addTask("contact Alice /phone 91234567 /email alice@example.com",
+                tasks, taskCount, false);
+
+        List<String> commands = loader.getExtensionStorageCommands();
+
+        assertEquals(List.of(
+                "contact Alice /phone 91234567 /email alice@example.com",
+                "note Watch Arrival",
+                "expense lunch /amount 5.00"), commands);
+        assertEquals(4, loader.getStoredItemCount(1));
+        assertThrows(UnsupportedOperationException.class, () -> commands.add("note another"));
     }
 }

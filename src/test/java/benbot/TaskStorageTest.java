@@ -2,10 +2,14 @@ package benbot;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -33,6 +37,41 @@ class TaskStorageTest {
                         + "mark 1" + System.lineSeparator()
                         + "mark 2" + System.lineSeparator(),
                 storedData);
+    }
+
+    @Test
+    void store_emptyList_truncatesExistingFile() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        Files.writeString(storedTaskPath, "todo obsolete task\n");
+
+        new TaskDataStore(storedTaskPath).store(new Task[1], 0);
+
+        assertEquals("", Files.readString(storedTaskPath));
+    }
+
+    @Test
+    void store_parentPathFile_throwsIoException() throws Exception {
+        Path blockingFile = temporaryDirectory.resolve("blocking-file");
+        Files.writeString(blockingFile, "not a directory");
+        Path storedTaskPath = blockingFile.resolve("stored-task");
+
+        assertThrows(IOException.class, () ->
+                new TaskDataStore(storedTaskPath).store(new Task[1], 0));
+    }
+
+    @Test
+    void store_invalidState_throwsAssertionError() {
+        TaskDataStore dataStore = new TaskDataStore(temporaryDirectory.resolve("stored-task"));
+        List<String> commandsWithNull = new ArrayList<>();
+        commandsWithNull.add(null);
+
+        assertThrows(AssertionError.class, () -> dataStore.store(null, 0));
+        assertThrows(AssertionError.class, () -> dataStore.store(new Task[1], -1));
+        assertThrows(AssertionError.class, () -> dataStore.store(new Task[1], 2));
+        assertThrows(AssertionError.class, () -> dataStore.store(new Task[1], 0, null));
+        assertThrows(AssertionError.class, () ->
+                dataStore.store(new Task[1], 0, commandsWithNull));
+        assertThrows(AssertionError.class, () -> dataStore.store(new Task[1], 1));
     }
 
     @Test
@@ -116,6 +155,47 @@ class TaskStorageTest {
     }
 
     @Test
+    void storeAndLoad_mixedItems_preservesAllData() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        TaskLoader sourceLoader = new TaskLoader(2);
+        Task[] sourceTasks = new Task[2];
+        int[] sourceTaskCount = {0};
+        sourceLoader.addTask("todo read book", sourceTasks, sourceTaskCount, false);
+        sourceLoader.addTask("deadline return book /by 1/12/2029",
+                sourceTasks, sourceTaskCount, false);
+        sourceLoader.addTask("mark 2", sourceTasks, sourceTaskCount, false);
+        sourceLoader.addTask("contact Alice Tan /phone 91234567 /email alice@example.com",
+                sourceTasks, sourceTaskCount, false);
+        sourceLoader.addTask("note Watch Arrival", sourceTasks, sourceTaskCount, false);
+        sourceLoader.addTask("expense bus fare /amount 2.40",
+                sourceTasks, sourceTaskCount, false);
+        new TaskDataStore(storedTaskPath).store(
+                sourceTasks, sourceTaskCount[0], sourceLoader.getExtensionStorageCommands());
+
+        TaskLoader loadedLoader = new TaskLoader(2);
+        Task[] loadedTasks = new Task[2];
+        int[] loadedTaskCount = {0};
+        String loadOutput = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
+                .load(loadedLoader, loadedTasks, loadedTaskCount));
+
+        assertEquals(2, loadedTaskCount[0]);
+        assertEquals("todo read book", loadedTasks[0].toStorageString());
+        assertFalse(loadedTasks[0].isDone());
+        assertEquals("deadline return book /by 1/12/2029", loadedTasks[1].toStorageString());
+        assertTrue(loadedTasks[1].isDone());
+        assertTrue(loadOutput.contains("5 items already in storage."));
+
+        loadedLoader.addTask("contacts", loadedTasks, loadedTaskCount, false);
+        assertTrue(loadedLoader.getLastResponse().contains(
+                "1.[C] Alice Tan (phone: 91234567; email: alice@example.com)"));
+        loadedLoader.addTask("notes", loadedTasks, loadedTaskCount, false);
+        assertTrue(loadedLoader.getLastResponse().contains("1.[N] Watch Arrival"));
+        loadedLoader.addTask("expenses", loadedTasks, loadedTaskCount, false);
+        assertTrue(loadedLoader.getLastResponse().contains("1.[$] bus fare ($2.40)"));
+        assertTrue(loadedLoader.getLastResponse().contains("Total expenses: $2.40"));
+    }
+
+    @Test
     void load_missingFile_reportsFreshStartWithoutChangingTasks() throws Exception {
         Path missingPath = temporaryDirectory.resolve("missing-task-file");
         Task[] tasks = new Task[1];
@@ -141,5 +221,71 @@ class TaskStorageTest {
         assertEquals(1, taskCount[0]);
         assertFalse(tasks[0].isDone());
         assertTrue(output.contains("Stored-task file is corrupted at line 2."));
+    }
+
+    @Test
+    void load_blankLines_ignoresBlankLines() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        Files.writeString(storedTaskPath, "todo read book\n\n   \nnote Watch Arrival\n");
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        String output = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
+                .load(loader, tasks, taskCount));
+
+        assertEquals(1, taskCount[0]);
+        assertEquals("todo read book", tasks[0].toStorageString());
+        loader.addTask("notes", tasks, taskCount, false);
+        assertTrue(loader.getLastResponse().contains("1.[N] Watch Arrival"));
+        assertTrue(output.contains("2 items already in storage."));
+    }
+
+    @Test
+    void load_repeatedMarkCommand_reportsCorruptionAndKeepsTaskDone() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        Files.writeString(storedTaskPath, "todo read book\nmark 1\nmark 1\n");
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        String output = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
+                .load(new TaskLoader(1), tasks, taskCount));
+
+        assertEquals(1, taskCount[0]);
+        assertTrue(tasks[0].isDone());
+        assertTrue(output.contains("Stored-task file is corrupted at line 3."));
+    }
+
+    @Test
+    void load_invalidMarkCommands_reportCorruption() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        String[] invalidMarkCommands = {"mark zero", "mark 0"};
+
+        for (String invalidMarkCommand : invalidMarkCommands) {
+            Files.writeString(storedTaskPath, "todo read book\n" + invalidMarkCommand + "\n");
+            Task[] tasks = new Task[1];
+            int[] taskCount = {0};
+
+            String output = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
+                    .load(new TaskLoader(1), tasks, taskCount));
+
+            assertEquals(1, taskCount[0]);
+            assertFalse(tasks[0].isDone());
+            assertTrue(output.contains("Stored-task file is corrupted at line 2."));
+        }
+    }
+
+    @Test
+    void load_pathIsDirectory_reportsReadError() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task-directory");
+        Files.createDirectory(storedTaskPath);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        String output = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
+                .load(new TaskLoader(1), tasks, taskCount));
+
+        assertEquals(0, taskCount[0]);
+        assertTrue(output.startsWith("ERROR: "));
     }
 }
