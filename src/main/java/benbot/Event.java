@@ -22,7 +22,7 @@ public class Event extends Task {
      * {@code event DESCRIPTION /from START /to END}. Dates are stored as date-time values.
      *
      * @param words the variable-length sequence of words entered in the command.
-     * @throws InvalidCommandException if either date text is invalid or the end precedes the start.
+     * @throws InvalidCommandException if either date text is invalid or the end is not after the start.
      */
     public Event(String... words) throws InvalidCommandException {
         super(getDescription(words), TaskType.EVENT);
@@ -32,8 +32,8 @@ public class Event extends Task {
         startIncludesTime = parsedStart.includesTime();
         endDateTime = parsedEnd.value();
         endIncludesTime = parsedEnd.includesTime();
-        if (endDateTime.isBefore(startDateTime)) {
-            throw new InvalidCommandException("An event's end must not be before its start.");
+        if (!endDateTime.isAfter(startDateTime)) {
+            throw new InvalidCommandException("An event's end must be after its start.");
         }
     }
 

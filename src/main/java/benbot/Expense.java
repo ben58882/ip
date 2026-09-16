@@ -3,11 +3,15 @@ package benbot;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Arrays;
+import java.util.regex.Pattern;
 
 /** Stores an expense description and a precise monetary amount. */
 final class Expense implements StorableEntity {
     /** The syntax accepted when adding an expense. */
     static final String USAGE = "expense DESCRIPTION /amount AMOUNT";
+
+    /** Matches a conventional decimal amount with no more than two decimal places. */
+    private static final Pattern AMOUNT_PATTERN = Pattern.compile("-?\\d+(?:\\.\\d{1,2})?");
 
     /** The explanation of what the user paid for. */
     private final String description;
@@ -32,8 +36,14 @@ final class Expense implements StorableEntity {
         }
 
         String description = String.join(" ", Arrays.copyOfRange(words, 1, amountIndex));
+        String amountText = words[amountIndex + 1];
+        if (!AMOUNT_PATTERN.matcher(amountText).matches()) {
+            throw new InvalidCommandException(
+                    "The expense amount must be a number with at most two decimal places.");
+        }
+
         try {
-            BigDecimal amount = new BigDecimal(words[amountIndex + 1])
+            BigDecimal amount = new BigDecimal(amountText)
                     .setScale(2, RoundingMode.UNNECESSARY);
             if (amount.signum() <= 0) {
                 throw new InvalidCommandException(

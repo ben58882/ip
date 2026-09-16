@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -57,6 +58,10 @@ class UiTest {
             assertTrue(outputLines.contains(commandLine));
         }
         assertTrue(outputLines.contains("Type bye to save all your data and exit."));
+        assertTrue(outputLines.contains("Leading, trailing, and repeated spaces are ignored."));
+        assertTrue(outputLines.contains(
+                "START and END each accept a date with an optional time; END must be after START."));
+        assertTrue(outputLines.contains("Exact duplicate tasks are rejected."));
         assertTrue(output.contains("15/9/2026"));
         assertTrue(output.contains("1800"));
     }
@@ -96,20 +101,75 @@ class UiTest {
 
         String response = ui.storeData(new TaskLoader(1), new Task[1], 0);
 
-        assertTrue(response.startsWith("ERROR: Unable to store data:"));
+        assertEquals(Ui.STORAGE_ERROR_MESSAGE, response);
     }
 
     @Test
-    void run_byeWithStorageFailure_printsError() throws Exception {
+    void run_byeWithStorageFailure_printsErrorAndContinues() throws Exception {
         Path parentFile = temporaryDirectory.resolve("parent-file");
         Files.writeString(parentFile, "not a directory");
-        Ui ui = new Ui(new Scanner("bye\n"),
+        Ui ui = new Ui(new Scanner("bye\ntodo read book\n"),
                 new TaskDataStore(parentFile.resolve("stored-task")));
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
 
         String output = OutputCapture.capture(() ->
-                ui.run(new TaskLoader(1), new Task[1], new int[] {0}));
+                ui.run(new TaskLoader(1), tasks, taskCount));
 
-        assertTrue(output.contains("Bye. Hope to see you again soon!"));
-        assertTrue(output.contains("ERROR: Unable to store data:"));
+        assertFalse(output.contains("Bye. Hope to see you again soon!"));
+        assertTrue(output.contains(Ui.STORAGE_ERROR_MESSAGE));
+        assertTrue(output.contains(BenBot.SAVE_RETRY_MESSAGE));
+        assertEquals(1, taskCount[0]);
+        assertEquals("todo read book", tasks[0].toStorageString());
+    }
+
+    @Test
+    void run_retryAfterStorageBecomesWritable_savesAndStops() throws Exception {
+        Path parentFile = temporaryDirectory.resolve("parent-file");
+        Path storedTaskPath = parentFile.resolve("stored-task");
+        Files.writeString(parentFile, "not a directory");
+        Ui ui = new Ui(new Scanner("bye\ntodo read book\nbye\ntodo ignored\n"),
+                new RepairAfterFailureTaskDataStore(parentFile));
+        Task[] tasks = new Task[2];
+        int[] taskCount = {0};
+
+        String output = OutputCapture.capture(() ->
+                ui.run(new TaskLoader(2), tasks, taskCount));
+
+        assertTrue(output.contains(Ui.STORAGE_ERROR_MESSAGE));
+        assertTrue(output.contains(BenBot.SAVE_RETRY_MESSAGE));
+        assertEquals(1, taskCount[0]);
+        assertEquals("todo read book", tasks[0].toStorageString());
+        assertEquals("todo read book" + System.lineSeparator(), Files.readString(storedTaskPath));
+        assertFalse(output.contains("ignored"));
+    }
+
+    /** Simulates an external storage-path repair immediately after the first failed save. */
+    private static final class RepairAfterFailureTaskDataStore extends TaskDataStore {
+        /** The file that initially prevents creation of the storage directory. */
+        private final Path blockingParentFile;
+
+        /** Whether the blocking path has already been replaced with a writable directory. */
+        private boolean hasRepairedStoragePath;
+
+        RepairAfterFailureTaskDataStore(Path blockingParentFile) {
+            super(blockingParentFile.resolve("stored-task"));
+            this.blockingParentFile = blockingParentFile;
+        }
+
+        /** Attempts a save and repairs the blocking parent path after its first failure. */
+        @Override
+        void store(Task[] tasks, int taskCount, List<String> extensionCommands) throws IOException {
+            try {
+                super.store(tasks, taskCount, extensionCommands);
+            } catch (IOException exception) {
+                if (!hasRepairedStoragePath) {
+                    Files.delete(blockingParentFile);
+                    Files.createDirectory(blockingParentFile);
+                    hasRepairedStoragePath = true;
+                }
+                throw exception;
+            }
+        }
     }
 }

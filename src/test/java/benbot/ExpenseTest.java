@@ -30,7 +30,7 @@ class ExpenseTest {
 
     @Test
     void createFromCommand_nonNumericOrOverPreciseAmount_throwsHelpfulException() {
-        String[] invalidAmounts = {"abc", "1.234"};
+        String[] invalidAmounts = {"abc", "1.234", "1.230"};
 
         for (String amount : invalidAmounts) {
             InvalidCommandException exception = assertThrows(InvalidCommandException.class, () ->
@@ -43,13 +43,26 @@ class ExpenseTest {
 
     @Test
     void createFromCommand_nonPositiveAmount_throwsHelpfulException() {
-        String[] invalidAmounts = {"0", "-1"};
+        String[] invalidAmounts = {"0", "-1", "-1.20"};
 
         for (String amount : invalidAmounts) {
             InvalidCommandException exception = assertThrows(InvalidCommandException.class, () ->
                     Expense.createFromCommand(
                             new String[] {"expense", "lunch", "/amount", amount}));
             assertEquals("The expense amount must be greater than zero.", exception.getMessage());
+        }
+    }
+
+    @Test
+    void createFromCommand_nonstandardAmountSyntax_throwsHelpfulException() {
+        String[] invalidAmounts = {"1e2", "1E2", "+2", ".50", "2.", "1_000", "$2"};
+
+        for (String amount : invalidAmounts) {
+            InvalidCommandException exception = assertThrows(InvalidCommandException.class, () ->
+                    Expense.createFromCommand(
+                            new String[] {"expense", "lunch", "/amount", amount}));
+            assertEquals("The expense amount must be a number with at most two decimal places.",
+                    exception.getMessage());
         }
     }
 
@@ -66,6 +79,7 @@ class ExpenseTest {
         String[][] invalidCommands = {
             {"expense", "lunch", "4.50"},
             {"expense", "lunch", "/amount"},
+            {"expense", "lunch", "/amount", "4.50", "/amount", "5.00"},
             {"expense", "lunch", "/amount", "4.50", "extra"}
         };
 

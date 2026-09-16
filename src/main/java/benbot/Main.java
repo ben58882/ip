@@ -42,16 +42,8 @@ public class Main extends Application {
         stage.setMinWidth(MINIMUM_WINDOW_WIDTH);
         stage.setMinHeight(MINIMUM_WINDOW_HEIGHT);
         stage.setScene(scene);
+        stage.setOnCloseRequest(controller::handleCloseRequest);
         stage.show();
-    }
-
-    /** Saves the current task list whenever JavaFX closes the window. */
-    @Override
-    public void stop() {
-        String storageError = benBot.save();
-        if (!storageError.isEmpty()) {
-            System.err.println(storageError);
-        }
     }
 
     /** Returns a required classpath resource or fails with a helpful message. */

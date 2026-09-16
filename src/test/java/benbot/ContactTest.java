@@ -37,6 +37,10 @@ class ContactTest {
             {"contact", "Alice", "/email", "alice@example.com", "/phone", "91234567"},
             {"contact", "Alice", "/phone", "/email", "alice@example.com"},
             {"contact", "Alice", "/phone", "91234567", "/email"},
+            {"contact", "Alice", "/phone", "91234567", "/phone", "87654321",
+                "/email", "alice@example.com"},
+            {"contact", "Alice", "/phone", "91234567", "/email", "alice@example.com",
+                "/email", "other@example.com"},
             {"contact", "Alice", "/phone", "91234567", "/email", "alice@example.com", "extra"}
         };
 

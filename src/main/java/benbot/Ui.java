@@ -5,6 +5,10 @@ import java.util.Scanner;
 
 /** Handles BenBot's command-line interaction with the user. */
 class Ui {
+    /** Message shown when BenBot cannot save data to its storage file. */
+    static final String STORAGE_ERROR_MESSAGE =
+            "ERROR: Unable to save data. Check that the data folder is writable, then try again.";
+
     /** The greeting and command summary shared by the terminal and graphical interfaces. */
     private static final String WELCOME_MESSAGE = String.join(System.lineSeparator(),
             "Hello! I'm BenBot.",
@@ -36,10 +40,12 @@ class Ui {
             "  delete-expense EXPENSE_NUMBER",
             "",
             "Use lowercase commands and replace the uppercase placeholders.",
+            "Leading, trailing, and repeated spaces are ignored.",
             "Each list has its own numbers, starting at 1.",
             "Dates: 15/9/2026; optional times: 1800 (24-hour HHmm).",
-            "START and END each accept a date with an optional time.",
-            "Amounts must be positive, such as 2.40, without a currency symbol.",
+            "START and END each accept a date with an optional time; END must be after START.",
+            "Exact duplicate tasks are rejected.",
+            "Amounts use digits and up to two decimal places, without a currency symbol.",
             "Type bye to save all your data and exit.",
             "What would you like to do?");
 
@@ -84,7 +90,7 @@ class Ui {
     }
 
     /**
-     * Reads and processes commands until input ends or the user enters {@code bye}.
+     * Reads and processes commands until input ends or a {@code bye} command saves successfully.
      *
      * @param taskLoader processes the entered commands.
      * @param tasks stores the current tasks.
@@ -94,12 +100,18 @@ class Ui {
         while (scanner.hasNextLine()) {
             String line = scanner.nextLine().trim();
             System.out.println(BenBot.DIVIDER);
-            if (taskLoader.addTask(line, tasks, taskCount, true)) {
+            boolean exitRequested = taskLoader.addTask(line, tasks, taskCount, false);
+            String response = taskLoader.getLastResponse();
+            if (exitRequested) {
                 String storageError = storeData(taskLoader, tasks, taskCount[0]);
-                if (!storageError.isEmpty()) {
-                    System.out.println(storageError);
+                if (storageError.isEmpty()) {
+                    System.out.println(response);
+                    break;
                 }
-                break;
+                System.out.println(storageError);
+                System.out.println(BenBot.SAVE_RETRY_MESSAGE);
+            } else {
+                System.out.println(response);
             }
         }
     }
@@ -112,8 +124,8 @@ class Ui {
         try {
             taskDataStore.store(tasks, taskCount, taskLoader.getExtensionStorageCommands());
             return "";
-        } catch (IOException e) {
-            return "ERROR: Unable to store data: " + e.getMessage();
+        } catch (IOException ignored) {
+            return STORAGE_ERROR_MESSAGE;
         }
     }
 }

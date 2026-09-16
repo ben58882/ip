@@ -2,6 +2,7 @@ package benbot;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -10,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -37,16 +39,31 @@ class TaskStorageTest {
                         + "mark 1" + System.lineSeparator()
                         + "mark 2" + System.lineSeparator(),
                 storedData);
+        assertNoTemporaryStorageFiles(storedTaskPath.getParent());
     }
 
     @Test
-    void store_emptyList_truncatesExistingFile() throws Exception {
+    void store_emptyList_replacesExistingFileWithEmptyData() throws Exception {
         Path storedTaskPath = temporaryDirectory.resolve("stored-task");
         Files.writeString(storedTaskPath, "todo obsolete task\n");
 
         new TaskDataStore(storedTaskPath).store(new Task[1], 0);
 
         assertEquals("", Files.readString(storedTaskPath));
+    }
+
+    @Test
+    void store_replacementFailure_preservesTargetAndCleansTemporaryFile() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("data/stored-task");
+        Files.createDirectories(storedTaskPath);
+        Path sentinelPath = storedTaskPath.resolve("sentinel");
+        Files.writeString(sentinelPath, "last good data");
+
+        assertThrows(IOException.class, () ->
+                new TaskDataStore(storedTaskPath).store(new Task[1], 0));
+
+        assertEquals("last good data", Files.readString(sentinelPath));
+        assertNoTemporaryStorageFiles(storedTaskPath.getParent());
     }
 
     @Test
@@ -209,7 +226,7 @@ class TaskStorageTest {
     }
 
     @Test
-    void load_corruptFile_reportsErrorAndKeepsValidEarlierTasks() throws Exception {
+    void load_corruptFile_reportsErrorAndLeavesLiveStateUnchanged() throws Exception {
         Path storedTaskPath = temporaryDirectory.resolve("stored-task");
         Files.writeString(storedTaskPath, "todo read book\ninvalid command\n");
         Task[] tasks = new Task[2];
@@ -218,9 +235,73 @@ class TaskStorageTest {
         String output = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
                 .load(new TaskLoader(2), tasks, taskCount));
 
-        assertEquals(1, taskCount[0]);
-        assertFalse(tasks[0].isDone());
+        assertEquals(0, taskCount[0]);
+        assertNull(tasks[0]);
+        assertTrue(output.startsWith("ERROR: Unable to load stored data."));
         assertTrue(output.contains("Stored-task file is corrupted at line 2."));
+        assertTrue(output.contains("The data already in BenBot was not changed."));
+    }
+
+    @Test
+    void load_commandsExceedRemainingCapacity_leavesExistingLiveStateUnchanged() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        Files.writeString(storedTaskPath, "todo first stored task\ntodo second stored task\n");
+        Task existingTask = new Task("existing task");
+        existingTask.markDone();
+        Task[] tasks = {existingTask, null};
+        int[] taskCount = {1};
+
+        String output = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
+                .load(new TaskLoader(2), tasks, taskCount));
+
+        assertEquals(1, taskCount[0]);
+        assertEquals("todo existing task", tasks[0].toStorageString());
+        assertTrue(tasks[0].isDone());
+        assertNull(tasks[1]);
+        assertTrue(output.contains("Stored-task file is corrupted at line 2."));
+    }
+
+    @Test
+    void load_markCommandWithExistingTask_marksTaskFromStoredFile() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        Files.writeString(storedTaskPath, "todo stored task\nmark 1\n");
+        Task existingTask = new Task("existing task");
+        Task[] tasks = {existingTask, null};
+        int[] taskCount = {1};
+        boolean[] wasLoaded = {false};
+
+        String output = OutputCapture.capture(() -> wasLoaded[0] = new StoredTaskLoader(storedTaskPath)
+                .load(new TaskLoader(2), tasks, taskCount));
+
+        assertTrue(wasLoaded[0]);
+        assertEquals(2, taskCount[0]);
+        assertFalse(tasks[0].isDone());
+        assertEquals("todo stored task", tasks[1].toStorageString());
+        assertTrue(tasks[1].isDone());
+        assertTrue(output.contains("1 item already in storage."));
+    }
+
+    @Test
+    void load_duplicateLiveTasks_stagingFailureLeavesLiveStateUnchanged() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        Files.writeString(storedTaskPath, "todo first stored task\ntodo second stored task\n");
+        Task firstDuplicate = new Task("duplicate task");
+        Task secondDuplicate = new Task("duplicate task");
+        Task[] tasks = {firstDuplicate, secondDuplicate, null};
+        int[] taskCount = {2};
+        boolean[] wasLoaded = {true};
+
+        String output = OutputCapture.capture(() -> wasLoaded[0] = new StoredTaskLoader(storedTaskPath)
+                .load(new TaskLoader(3), tasks, taskCount));
+
+        assertFalse(wasLoaded[0]);
+        assertEquals(2, taskCount[0]);
+        assertEquals("todo duplicate task", tasks[0].toStorageString());
+        assertEquals("todo duplicate task", tasks[1].toStorageString());
+        assertNull(tasks[2]);
+        assertTrue(output.contains(
+                "Existing BenBot data could not be validated safely before loading stored data."));
+        assertTrue(output.contains("The data already in BenBot was not changed."));
     }
 
     @Test
@@ -242,7 +323,23 @@ class TaskStorageTest {
     }
 
     @Test
-    void load_repeatedMarkCommand_reportsCorruptionAndKeepsTaskDone() throws Exception {
+    void load_surroundingAndRepeatedWhitespace_normalizesCommands() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        Files.writeString(storedTaskPath, "  todo    read   book  \n\tmark   1\t\n");
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        String output = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
+                .load(new TaskLoader(1), tasks, taskCount));
+
+        assertEquals(1, taskCount[0]);
+        assertEquals("todo read book", tasks[0].toStorageString());
+        assertTrue(tasks[0].isDone());
+        assertTrue(output.contains("1 item already in storage."));
+    }
+
+    @Test
+    void load_repeatedMarkCommand_reportsCorruptionAndLeavesLiveStateUnchanged() throws Exception {
         Path storedTaskPath = temporaryDirectory.resolve("stored-task");
         Files.writeString(storedTaskPath, "todo read book\nmark 1\nmark 1\n");
         Task[] tasks = new Task[1];
@@ -251,8 +348,8 @@ class TaskStorageTest {
         String output = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
                 .load(new TaskLoader(1), tasks, taskCount));
 
-        assertEquals(1, taskCount[0]);
-        assertTrue(tasks[0].isDone());
+        assertEquals(0, taskCount[0]);
+        assertNull(tasks[0]);
         assertTrue(output.contains("Stored-task file is corrupted at line 3."));
     }
 
@@ -269,9 +366,36 @@ class TaskStorageTest {
             String output = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
                     .load(new TaskLoader(1), tasks, taskCount));
 
-            assertEquals(1, taskCount[0]);
-            assertFalse(tasks[0].isDone());
+            assertEquals(0, taskCount[0]);
+            assertNull(tasks[0]);
             assertTrue(output.contains("Stored-task file is corrupted at line 2."));
+        }
+    }
+
+    @Test
+    void load_disallowedMutatingCommands_leaveLiveStateUnchanged() throws Exception {
+        Path storedTaskPath = temporaryDirectory.resolve("stored-task");
+        String[] corruptedDataVersions = {
+            "todo read book\ndelete 1\n",
+            "todo read book\nmark 1\nunmark 1\n",
+            "contact Alice /phone 91234567 /email alice@example.com\ndelete-contact 1\n",
+            "note remember this\ndelete-note 1\n",
+            "expense lunch /amount 5.00\ndelete-expense 1\n"
+        };
+
+        for (String corruptedData : corruptedDataVersions) {
+            Files.writeString(storedTaskPath, corruptedData);
+            TaskLoader taskLoader = new TaskLoader(1);
+            Task[] tasks = new Task[1];
+            int[] taskCount = {0};
+
+            String output = OutputCapture.capture(() -> new StoredTaskLoader(storedTaskPath)
+                    .load(taskLoader, tasks, taskCount));
+
+            assertEquals(0, taskCount[0]);
+            assertEquals(0, taskLoader.getStoredItemCount(taskCount[0]));
+            assertNull(tasks[0]);
+            assertTrue(output.contains("Stored-task file is corrupted at line "));
         }
     }
 
@@ -286,6 +410,16 @@ class TaskStorageTest {
                 .load(new TaskLoader(1), tasks, taskCount));
 
         assertEquals(0, taskCount[0]);
-        assertTrue(output.startsWith("ERROR: "));
+        assertTrue(output.startsWith("ERROR: Unable to load stored data."));
+        assertTrue(output.contains("The data already in BenBot was not changed."));
+        assertTrue(output.contains(
+                "The existing storage file will not be overwritten. Fix it before restarting BenBot."));
+    }
+
+    private void assertNoTemporaryStorageFiles(Path directory) throws IOException {
+        try (Stream<Path> paths = Files.list(directory)) {
+            assertFalse(paths.anyMatch(path ->
+                    path.getFileName().toString().startsWith("benbot-storage-")));
+        }
     }
 }

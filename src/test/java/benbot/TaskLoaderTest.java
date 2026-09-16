@@ -19,6 +19,11 @@ class TaskLoaderTest {
     }
 
     @Test
+    void getMaxTasks_configuredCapacity_returnsCapacity() {
+        assertEquals(7, new TaskLoader(7).getMaxTasks());
+    }
+
+    @Test
     void addTask_todoDeadlineAndEvent_addsEachTask() {
         TaskLoader loader = new TaskLoader(3);
         Task[] tasks = new Task[3];
@@ -107,6 +112,31 @@ class TaskLoaderTest {
     }
 
     @Test
+    void addTask_whitespaceOnlyCommand_reportsErrorAndLeavesTasksUnchanged() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        loader.addTask(" \t  ", tasks, taskCount, false);
+
+        assertEquals("Please enter a command.", loader.getLastResponse());
+        assertEquals(0, taskCount[0]);
+        assertNull(tasks[0]);
+    }
+
+    @Test
+    void addTask_surroundingWhitespace_stripsCommandBeforeDispatch() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        loader.addTask(" \t todo read book \t ", tasks, taskCount, false);
+
+        assertEquals(1, taskCount[0]);
+        assertEquals("todo read book", tasks[0].toStorageString());
+    }
+
+    @Test
     void addTask_outputDisabled_recordsResponseWithoutPrinting() throws Exception {
         TaskLoader loader = new TaskLoader(1);
         Task[] tasks = new Task[1];
@@ -147,6 +177,9 @@ class TaskLoaderTest {
         assertEquals("Use: mark TASK_NUMBER", loader.getLastResponse());
 
         loader.addTask("unmark one", tasks, taskCount, false);
+        assertEquals("The task number must be a whole number.", loader.getLastResponse());
+
+        loader.addTask("mark +1", tasks, taskCount, false);
         assertEquals("The task number must be a whole number.", loader.getLastResponse());
 
         loader.addTask("delete 0", tasks, taskCount, false);
@@ -209,6 +242,45 @@ class TaskLoaderTest {
     }
 
     @Test
+    void addTask_findKeywordWithRepeatedWhitespace_matchesNormalizedDescription() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = {new Task("read book")};
+        int[] taskCount = {1};
+
+        loader.addTask("find read \t  book", tasks, taskCount, false);
+
+        assertTrue(loader.getLastResponse().contains("1.[T][ ] read book"));
+        assertEquals(1, taskCount[0]);
+    }
+
+    @Test
+    void addTask_duplicateCanonicalTasks_reportsErrorAndLeavesTasksUnchanged() {
+        TaskLoader loader = new TaskLoader(6);
+        Task[] tasks = new Task[6];
+        int[] taskCount = {0};
+        String[][] equivalentCommandPairs = {
+            {"todo read book", "todo read   book"},
+            {"deadline return book /by 1/12/2029", "deadline return  book /by 1/12/2029"},
+            {
+                "event study /from 2/12/2029 1800 /to 2/12/2029 2000",
+                "event study /from 2/12/2029  1800 /to 2/12/2029 2000"
+            }
+        };
+
+        for (String[] commandPair : equivalentCommandPairs) {
+            loader.addTask(commandPair[0], tasks, taskCount, false);
+            int taskCountBeforeDuplicate = taskCount[0];
+
+            loader.addTask(commandPair[1], tasks, taskCount, false);
+
+            assertEquals("That task is already in your list.", loader.getLastResponse());
+            assertEquals(taskCountBeforeDuplicate, taskCount[0]);
+        }
+        assertEquals(3, taskCount[0]);
+        assertNull(tasks[3]);
+    }
+
+    @Test
     void addTask_deleteLastTask_removesTaskWithoutShiftingPastArrayEnd() {
         TaskLoader loader = new TaskLoader(2);
         Task[] tasks = {new Task("read book"), new Task("buy pen")};
@@ -249,6 +321,27 @@ class TaskLoaderTest {
             assertEquals("Use: event DESCRIPTION /from START /to END", loader.getLastResponse());
         }
         assertEquals(0, taskCount[0]);
+    }
+
+    @Test
+    void addTask_repeatedSchedulingMarkers_reportsUsageAndLeavesTasksUnchanged() {
+        TaskLoader loader = new TaskLoader(1);
+        Task[] tasks = new Task[1];
+        int[] taskCount = {0};
+
+        loader.addTask("deadline return book /by 1/12/2029 /by 2/12/2029",
+                tasks, taskCount, false);
+        assertEquals("Use: deadline DESCRIPTION /by DATE", loader.getLastResponse());
+
+        loader.addTask("event meeting /from 1/12/2029 /from 2/12/2029 /to 3/12/2029",
+                tasks, taskCount, false);
+        assertEquals("Use: event DESCRIPTION /from START /to END", loader.getLastResponse());
+
+        loader.addTask("event meeting /from 1/12/2029 /to 2/12/2029 /to 3/12/2029",
+                tasks, taskCount, false);
+        assertEquals("Use: event DESCRIPTION /from START /to END", loader.getLastResponse());
+        assertEquals(0, taskCount[0]);
+        assertNull(tasks[0]);
     }
 
     @Test
@@ -434,6 +527,8 @@ class TaskLoaderTest {
         assertEquals("Use: delete-note NOTE_NUMBER", loader.getLastResponse());
         loader.addTask("delete-expense one", tasks, taskCount, false);
         assertEquals("The expense number must be a whole number.", loader.getLastResponse());
+        loader.addTask("delete-contact +1", tasks, taskCount, false);
+        assertEquals("The contact number must be a whole number.", loader.getLastResponse());
 
         assertEquals(3, loader.getStoredItemCount(0));
     }

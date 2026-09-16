@@ -66,6 +66,21 @@ class ScheduledTaskTest {
                         "event", "study", "/from", "2/12/2019", "2000",
                         "/to", "2/12/2019", "1800"));
 
-        assertEquals("An event's end must not be before its start.", exception.getMessage());
+        assertEquals("An event's end must be after its start.", exception.getMessage());
+    }
+
+    @Test
+    void event_endAtStart_throwsException() {
+        InvalidCommandException dateTimeException = assertThrows(InvalidCommandException.class, () ->
+                new Event(
+                        "event", "study", "/from", "2/12/2019", "1800",
+                        "/to", "2/12/2019", "1800"));
+        InvalidCommandException dateOnlyException = assertThrows(InvalidCommandException.class, () ->
+                new Event(
+                        "event", "holiday", "/from", "2/12/2019",
+                        "/to", "2/12/2019"));
+
+        assertEquals("An event's end must be after its start.", dateTimeException.getMessage());
+        assertEquals("An event's end must be after its start.", dateOnlyException.getMessage());
     }
 }
