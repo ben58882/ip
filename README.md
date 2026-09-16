@@ -176,3 +176,13 @@ The generated file is `build/libs/benbot.jar`. With Java 25, start it using:
 ```bash
 java -jar build/libs/benbot.jar
 ```
+
+## AI usage acknowledgement
+
+This project was developed with assistance from
+[OpenAI Codex](https://developers.openai.com/codex/), accessed through ChatGPT.
+Codex assisted with requirements analysis, Java implementation and refactoring,
+automated tests, error handling and storage safety, documentation review, and
+Git workflows. All AI-generated suggestions and code were reviewed, tested, and
+accepted by the project author, who remains responsible for the final work. No
+other AI tools were used.
